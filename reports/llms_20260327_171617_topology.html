@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI Topology — llms</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+<style>
+:root {
+  --bg: #0a0e17;
+  --surface: #111827;
+  --surface2: #1a2233;
+  --border: #2a3a50;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --accent: #60a5fa;
+  --green: #4ade80;
+  --red: #f87171;
+  --yellow: #fbbf24;
+  --purple: #c084fc;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.header {
+  background: linear-gradient(135deg, #111827 0%, #0f1f3d 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.header-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.header-title h1 {
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.header-title .meta {
+  font-size: .7rem;
+  color: var(--muted);
+  margin-top: 1px;
+}
+.header-title .meta a { color: var(--accent); text-decoration: none; }
+.stat-pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.pill {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 2px 9px;
+  font-size: .7rem; color: var(--muted);
+  white-space: nowrap;
+}
+.pill-num { font-weight: 700; color: var(--text); }
+.pill.red { border-color: #f8514940; }
+.pill.red .pill-num { color: var(--red); }
+.pill.green { border-color: #4ade8040; }
+.pill.green .pill-num { color: var(--green); }
+.btn-group { display: flex; gap: 5px; margin-left: auto; flex-wrap: wrap; }
+.btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); padding: 4px 10px;
+  border-radius: 6px; cursor: pointer;
+  font-size: .72rem; font-family: inherit;
+  transition: border-color .15s, color .15s, background .15s;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.active { border-color: var(--accent); color: var(--accent); background: #0d1f3c; }
+.search-bar {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 10px;
+  color: var(--text); font-size: .72rem; font-family: inherit;
+  width: 160px; outline: none;
+  transition: border-color .15s;
+}
+.search-bar:focus { border-color: var(--accent); }
+.search-bar::placeholder { color: var(--muted); }
+
+/* ── Focus mode breadcrumb ── */
+.focus-bar {
+  display: none;
+  background: #0d1f3c;
+  border-bottom: 1px solid #1a4a7a;
+  padding: 5px 18px;
+  font-size: .72rem;
+  color: var(--accent);
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.focus-bar.active { display: flex; }
+.focus-crumb { font-weight: 600; }
+.focus-hint { color: var(--muted); }
+.focus-exit {
+  margin-left: auto; cursor: pointer;
+  background: none; border: 1px solid #1a4a7a;
+  color: var(--accent); border-radius: 5px;
+  padding: 2px 8px; font-size: .7rem; font-family: inherit;
+}
+.focus-exit:hover { background: #1a4a7a; }
+
+/* ── Main ── */
+.main {
+  display: flex; flex: 1; min-height: 0; position: relative;
+}
+#cy {
+  flex: 1;
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 15% 15%, #0d2d5a18 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 85%, #0a281a18 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 15%, #2d0f0f10 0%, transparent 45%);
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 270px; background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow-y: auto; flex-shrink: 0;
+  transition: width .25s;
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.sb-section { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.sb-title {
+  font-size: .65rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 9px;
+}
+
+/* Node detail */
+.node-detail { display: none; }
+.nd-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  border-radius: 4px; padding: 2px 8px;
+  font-size: .68rem; font-weight: 600; margin-bottom: 7px;
+}
+.nd-logo {
+  width: 28px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 8px; overflow: hidden;
+}
+.nd-logo img { width: 20px; height: 20px; filter: brightness(1.2); }
+.nd-name { font-size: .95rem; font-weight: 700; margin-bottom: 2px; line-height: 1.3; }
+.nd-version {
+  font-size: .7rem; color: var(--muted);
+  font-family: 'SF Mono', Monaco, monospace; margin-bottom: 7px;
+}
+.nd-desc { font-size: .76rem; line-height: 1.55; margin-bottom: 7px; color: var(--text); }
+.nd-issue {
+  background: #2d0f0f; border: 1px solid #f8514960;
+  border-radius: 5px; padding: 5px 9px;
+  font-size: .72rem; color: var(--red); margin-top: 4px; line-height: 1.4;
+}
+.nd-issue::before { content: '⚠️ '; }
+.nd-connections { font-size: .72rem; color: var(--muted); margin-top: 8px; }
+.nd-connections strong { color: var(--text); }
+
+/* Legend */
+.legend-row { display: flex; align-items: center; gap: 7px; font-size: .74rem; margin-bottom: 5px; }
+.legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+/* Issue cards */
+.issue-card {
+  background: #1a0a0a; border: 1px solid #f8514930;
+  border-radius: 5px; padding: 7px 9px; margin-bottom: 6px;
+}
+.issue-label { font-size: .74rem; font-weight: 600; color: var(--red); margin-bottom: 2px; }
+.issue-text { font-size: .7rem; color: #fca5a5; line-height: 1.4; }
+.no-issues { font-size: .74rem; color: var(--green); display: flex; align-items: center; gap: 5px; }
+
+/* Cluster buttons */
+.cluster-btn {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 5px 9px; margin-bottom: 4px;
+  cursor: pointer; font-size: .73rem; color: var(--text);
+  font-family: inherit; text-align: left;
+  transition: border-color .15s, background .15s;
+}
+.cluster-btn:hover { border-color: var(--accent); background: #0d1f3c20; }
+.cluster-btn.focused { border-color: var(--accent); background: #0d1f3c; }
+.cluster-btn .cb-label { display: flex; align-items: center; gap: 6px; }
+.cluster-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.cluster-count { background: var(--border); border-radius: 8px; padding: 1px 6px; font-size: .65rem; color: var(--muted); }
+.cluster-arrow { color: var(--muted); font-size: .65rem; transition: transform .2s; }
+.cluster-btn.collapsed .cluster-arrow { transform: rotate(-90deg); }
+
+/* Tooltip */
+.cy-tooltip {
+  position: fixed;
+  background: rgba(17, 24, 39, 0.97);
+  border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 13px;
+  font-size: .74rem; color: var(--text);
+  max-width: 240px; pointer-events: none;
+  z-index: 9999; display: none;
+  box-shadow: 0 8px 40px #00000080;
+  line-height: 1.5; backdrop-filter: blur(4px);
+}
+.cy-tooltip .tt-name { font-weight: 700; color: var(--accent); margin-bottom: 2px; }
+.cy-tooltip .tt-ver { color: var(--muted); font-size: .68rem; font-family: monospace; }
+.cy-tooltip .tt-desc { margin-top: 4px; }
+.cy-tooltip .tt-issue { color: var(--red); font-size: .7rem; margin-top: 4px; }
+.cy-tooltip .tt-hint { color: var(--muted); font-size: .66rem; margin-top: 5px; border-top: 1px solid var(--border); padding-top: 4px; }
+
+/* Export link */
+#export-link { display: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">
+    <h1>🔍 AI System Topology — llms</h1>
+    <div class="meta">
+      <a href="https://github.com/rlfagan/llms" target="_blank">https://github.com/rlfagan/llms</a>
+      &nbsp;·&nbsp; 20260327_171617
+    </div>
+  </div>
+
+  <div class="stat-pills">
+    <div class="pill"><span class="pill-num">62</span>&nbsp;components</div>
+    <div class="pill"><span class="pill-num">65</span>&nbsp;connections</div>
+    <div class="pill red"><span class="pill-num">1</span>&nbsp;with issues</div>
+    <div class="pill green"><span class="pill-num">10</span>&nbsp;categories</div>
+  </div>
+
+  <input type="text" class="search-bar" id="search" placeholder="🔍 Search…" oninput="filterNodes(this.value)">
+
+  <div class="btn-group">
+    <button class="btn" onclick="resetView()">⊙ Fit All</button>
+    <button class="btn" onclick="exportPng()">↓ PNG</button>
+  </div>
+</div>
+
+<div class="focus-bar" id="focus-bar">
+  <span>🔎 Focus:</span>
+  <span class="focus-crumb" id="focus-crumb"></span>
+  <span class="focus-hint">· showing direct connections only</span>
+  <button class="focus-exit" onclick="exitFocus()">✕ Exit Focus &nbsp;<kbd>Esc</kbd></button>
+</div>
+
+<div class="main">
+  <div id="cy"></div>
+  <div class="cy-tooltip" id="tooltip"></div>
+
+  <div class="sidebar">
+
+    <div class="sb-section node-detail" id="node-detail">
+      <div class="sb-title">Selected Component</div>
+      <div id="nd-content"></div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-title">Categories <span style="color:var(--muted);font-weight:400;text-transform:none">(double-click to focus)</span></div>
+      <div id="cluster-controls"></div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-title">Legend</div>
+      
+        <div class="legend-row">
+          <span class="legend-dot" style="background:#bc8cff"></span>
+          <span>Agents & Orchestration</span>
+        </div>
+        <div class="legend-row">
+          <span class="legend-dot" style="background:#8b949e"></span>
+          <span>Clients</span>
+        </div>
+        <div class="legend-row">
+          <span class="legend-dot" style="background:#58a6ff"></span>
+          <span>Data & Storage</span>
+        </div>
+        <div class="legend-row">
+          <span class="legend-dot" style="background:#39c5cf"></span>
+          <span>Embeddings & Vector</span>
+        </div>
+        <div class="legend-row">
+          <span class="legend-dot" style="background:#79c0ff"></span>
+          <span>AI Frameworks & Libs</span>
+        </div>
+        <div class="legend-row">
+          <span class="legend-dot" style="background:#58a6ff"></span>
+          <span>Gateway / Proxy</span>
+        </div>
+        <div class="legend-row">
+          <span class="legend-dot" style="background:#d29922"></span>
+          <span>AI Infrastructure</span>
+        </div>
+        <div class="legend-row">
+          <span class="legend-dot" style="background:#f85149"></span>
+          <span>CVEs & Security Issues</span>
+        </div>
+        <div class="legend-row">
+          <span class="legend-dot" style="background:#3fb950"></span>
+          <span>LLM Integrations</span>
+        </div>
+        <div class="legend-row">
+          <span class="legend-dot" style="background:#56d364"></span>
+          <span>Confirmed Models</span>
+        </div>
+      <div class="legend-row" style="margin-top:3px">
+        <span class="legend-dot" style="background:var(--red);box-shadow:0 0 5px var(--red)"></span>
+        <span>Has Security Issues</span>
+      </div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-title" style="color:var(--red)">🚨 Security Issues (2)</div>
+      
+            <div class="issue-card">
+              <div class="issue-label">⚠️ CycloneDX 1.7 AI-BOM Output</div>
+              <div class="issue-text">Generated CycloneDX 1.7 compliant AI Bill of Materials with OWASP AI BOM extensions</div>
+            </div>
+            <div class="issue-card">
+              <div class="issue-label">⚠️ API Key in Secrets</div>
+              <div class="issue-text">ANTHROPIC_API_KEY stored as GitHub secret</div>
+            </div>
+    </div>
+
+  </div>
+</div>
+
+<a id="export-link"></a>
+
+<script>
+const elements = [{"data": {"id": "hub_group-client", "label": "Clients", "isHub": true, "group": "group-client", "hubColor": "#3a4450", "hubBorder": "#8b949e", "textColor": "#8b949e"}, "position": {"x": -80, "y": 20}, "classes": "hub-node"}, {"data": {"id": "hub_group-infra", "label": "AI Infrastructure", "isHub": true, "group": "group-infra", "hubColor": "#6b4e0a", "hubBorder": "#d29922", "textColor": "#d29922"}, "position": {"x": 440, "y": 20}, "classes": "hub-node"}, {"data": {"id": "hub_group-agents", "label": "Agents & Orchestration", "isHub": true, "group": "group-agents", "hubColor": "#3d2080", "hubBorder": "#bc8cff", "textColor": "#bc8cff"}, "position": {"x": 960, "y": 20}, "classes": "hub-node"}, {"data": {"id": "hub_group-llm", "label": "LLM Integrations", "isHub": true, "group": "group-llm", "hubColor": "#1a5c30", "hubBorder": "#3fb950", "textColor": "#3fb950"}, "position": {"x": 1480, "y": 20}, "classes": "hub-node"}, {"data": {"id": "hub_group-gateway", "label": "Gateway / Proxy", "isHub": true, "group": "group-gateway", "hubColor": "#1a4a7a", "hubBorder": "#58a6ff", "textColor": "#58a6ff"}, "position": {"x": -80, "y": 500}, "classes": "hub-node"}, {"data": {"id": "hub_group-frameworks", "label": "AI Frameworks & Libs", "isHub": true, "group": "group-frameworks", "hubColor": "#1a3a5c", "hubBorder": "#79c0ff", "textColor": "#79c0ff"}, "position": {"x": 440, "y": 500}, "classes": "hub-node"}, {"data": {"id": "hub_group-data", "label": "Data & Storage", "isHub": true, "group": "group-data", "hubColor": "#1a3a6b", "hubBorder": "#58a6ff", "textColor": "#58a6ff"}, "position": {"x": 960, "y": 500}, "classes": "hub-node"}, {"data": {"id": "hub_group-models", "label": "Confirmed Models", "isHub": true, "group": "group-models", "hubColor": "#1a5c30", "hubBorder": "#56d364", "textColor": "#56d364"}, "position": {"x": 1480, "y": 500}, "classes": "hub-node"}, {"data": {"id": "hub_group-embeddings", "label": "Embeddings & Vector", "isHub": true, "group": "group-embeddings", "hubColor": "#1a4a5c", "hubBorder": "#39c5cf", "textColor": "#39c5cf"}, "position": {"x": 440, "y": 980}, "classes": "hub-node"}, {"data": {"id": "hub_group-issues", "label": "CVEs & Security Issues", "isHub": true, "group": "group-issues", "hubColor": "#7a1a1a", "hubBorder": "#f85149", "textColor": "#f85149"}, "position": {"x": 960, "y": 980}, "classes": "hub-node"}, {"data": {"id": "client", "label": "End User / Developer", "parent_group": "group-client", "nodeType": "client", "version": "unknown", "tooltip": "Developer who triggers the AI component scan via GitHub Actions or CLI", "issues": [], "issuesText": "", "hasIssues": false, "color": "#8b949e", "borderColor": "#8b949e", "bgColor": "#1c2128", "iconDataUri": "", "hubId": "hub_group-client"}, "position": {"x": -80, "y": 20}, "classes": "type-client"}, {"data": {"id": "github-actions", "label": "GitHub Actions CI/CD", "parent_group": "group-infra", "nodeType": "infra", "version": "unknown", "tooltip": "CI/CD pipeline that orchestrates the scanning workflow on push/PR/manual dispatch", "issues": [], "issuesText": "", "hasIssues": false, "color": "#d29922", "borderColor": "#d29922", "bgColor": "#2d2007", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPkdpdEh1YjwvdGl0bGU+PHBhdGggZD0iTTEyIC4yOTdjLTYuNjMgMC0xMiA1LjM3My0xMiAxMiAwIDUuMzAzIDMuNDM4IDkuOCA4LjIwNSAxMS4zODUuNi4xMTMuODItLjI1OC44Mi0uNTc3IDAtLjI4NS0uMDEtMS4wNC0uMDE1LTIuMDQtMy4zMzguNzI0LTQuMDQyLTEuNjEtNC4wNDItMS42MUM0LjQyMiAxOC4wNyAzLjYzMyAxNy43IDMuNjMzIDE3LjdjLTEuMDg3LS43NDQuMDg0LS43MjkuMDg0LS43MjkgMS4yMDUuMDg0IDEuODM4IDEuMjM2IDEuODM4IDEuMjM2IDEuMDcgMS44MzUgMi44MDkgMS4zMDUgMy40OTUuOTk4LjEwOC0uNzc2LjQxNy0xLjMwNS43Ni0xLjYwNS0yLjY2NS0uMy01LjQ2Ni0xLjMzMi01LjQ2Ni01LjkzIDAtMS4zMS40NjUtMi4zOCAxLjIzNS0zLjIyLS4xMzUtLjMwMy0uNTQtMS41MjMuMTA1LTMuMTc2IDAgMCAxLjAwNS0uMzIyIDMuMyAxLjIzLjk2LS4yNjcgMS45OC0uMzk5IDMtLjQwNSAxLjAyLjAwNiAyLjA0LjEzOCAzIC40MDUgMi4yOC0xLjU1MiAzLjI4NS0xLjIzIDMuMjg1LTEuMjMuNjQ1IDEuNjUzLjI0IDIuODczLjEyIDMuMTc2Ljc2NS44NCAxLjIzIDEuOTEgMS4yMyAzLjIyIDAgNC42MS0yLjgwNSA1LjYyNS01LjQ3NSA1LjkyLjQyLjM2LjgxIDEuMDk2LjgxIDIuMjIgMCAxLjYwNi0uMDE1IDIuODk2LS4wMTUgMy4yODYgMCAuMzE1LjIxLjY5LjgyNS41N0MyMC41NjUgMjIuMDkyIDI0IDE3LjU5MiAyNCAxMi4yOTdjMC02LjYyNy01LjM3My0xMi0xMi0xMiIvPjwvc3ZnPg==", "hubId": "hub_group-infra"}, "position": {"x": 440, "y": -110}, "classes": "type-infra has-logo"}, {"data": {"id": "reg-langsmith", "label": "LangSmith (cataloged)", "parent_group": "group-infra", "nodeType": "observability", "version": "unknown", "tooltip": "Cataloged LLM observability/tracing tool by LangChain, MIT license", "issues": [], "issuesText": "", "hasIssues": false, "color": "#d29922", "borderColor": "#d29922", "bgColor": "#2d2007", "iconDataUri": "", "hubId": "hub_group-infra"}, "position": {"x": 553, "y": -45}, "classes": "type-observability"}, {"data": {"id": "html-report", "label": "HTML Scan Report", "parent_group": "group-infra", "nodeType": "infra", "version": "unknown", "tooltip": "Interactive HTML report with CVE panel, model cards, and security findings", "issues": [], "issuesText": "", "hasIssues": false, "color": "#d29922", "borderColor": "#d29922", "bgColor": "#2d2007", "iconDataUri": "", "hubId": "hub_group-infra"}, "position": {"x": 553, "y": 85}, "classes": "type-infra"}, {"data": {"id": "topology-viz", "label": "Topology Visualization (Cytoscape.js)", "parent_group": "group-infra", "nodeType": "infra", "version": "3.28.1", "tooltip": "Interactive graph visualization of AI system topology using Cytoscape.js", "issues": [], "issuesText": "", "hasIssues": false, "color": "#d29922", "borderColor": "#d29922", "bgColor": "#2d2007", "iconDataUri": "", "hubId": "hub_group-infra"}, "position": {"x": 440, "y": 150}, "classes": "type-infra"}, {"data": {"id": "download-script", "label": "download_top10.py", "parent_group": "group-infra", "nodeType": "infra", "version": "unknown", "tooltip": "Script to download metadata for the top 10 most popular Hugging Face models", "issues": [], "issuesText": "", "hasIssues": false, "color": "#d29922", "borderColor": "#d29922", "bgColor": "#2d2007", "iconDataUri": "", "hubId": "hub_group-infra"}, "position": {"x": 327, "y": 85}, "classes": "type-infra"}, {"data": {"id": "scan-py", "label": "claudescan (scan.py)", "parent_group": "group-agents", "nodeType": "agent", "version": "1.0.0", "tooltip": "Main AI-powered scanner that collects repo files, sends them to Claude for analysis, and assembles reports", "issues": [], "issuesText": "", "hasIssues": false, "color": "#bc8cff", "borderColor": "#bc8cff", "bgColor": "#1e1240", "iconDataUri": "", "hubId": "hub_group-agents"}, "position": {"x": 960, "y": -110}, "classes": "type-agent"}, {"data": {"id": "reg-langchain", "label": "LangChain (cataloged)", "parent_group": "group-agents", "nodeType": "agent", "version": "unknown", "tooltip": "Cataloged orchestration framework \u2014 langchain, langchain-core, langchain-community, MIT license", "issues": [], "issuesText": "", "hasIssues": false, "color": "#bc8cff", "borderColor": "#bc8cff", "bgColor": "#1e1240", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPkxhbmdDaGFpbjwvdGl0bGU+PHBhdGggZD0iTTYuMDk4OCA1LjkxNzVDMi43MzU5IDUuOTE3NSAwIDguNjQ2MiAwIDEyczIuNzM2IDYuMDgyNSA2LjA5ODggNi4wODI1aDExLjgwMjRDMjEuMjY0MSAxOC4wODI1IDI0IDE1LjM1MzggMjQgMTJzLTIuNzM2LTYuMDgyNS02LjA5ODgtNi4wODI1Wk01Ljk3NzQgNy44NTFjLjQ5My4wMTI0IDEuMDIuMjQ5NiAxLjI3My42MjI4LjM2NzMuNDU5Mi40Nzc4IDEuMDY2OC44OTQ0IDEuNDkzMi41NjA0LjYxMTggMS4xOTkgMS4xNTA1IDEuNzE2MSAxLjgwMi40ODkyLjU5NTQuODM4NiAxLjI5MzcgMS4xNDM2IDEuOTk3NS4xMjQ0LjIzMzUuMTI1Ny41MjAyLjMxLjcxOTcuMDkwOC4xMjA0LjUzNDYuNDQ4My40MzgzLjU2NDUuMDU1NS4xMjA0LjQ3MDIuMjg2LjMyNjMuNDAyNy0uMTk0NC4wNC0uNDEyOS4wNDc2LS41NjE2LS4xMDc0LS4wNTQ5LjEyNi0uMTgzLjA1OTYtLjI4MTkuMDQzMmE0IDQgMCAwIDAtLjAyNS4wNzM2Yy0uMzI4OC4wMjE5LS41NzU0LS4zMTI2LS43MzItLjU2NS0uMzExMS0uMTY4LS42NjQyLS4yNzAyLS45ODItLjQ0Ni0uMDE4Mi4yODk1LjA0NTIuNjQ4NS0uMjMxLjgzNTMtLjAxNC41NTY1Ljg0MzYuMDY1Ni45MjIyLjQ4MDQtLjA2MS4wMDY3LS4xMjg2LS4wMDk1LS4xNzc0LjAzNzMtLjIyMzkuMjE3Mi0uNDgwNS0uMTY0NS0uNzM4NS0uMDA3LS4zNDY0LjE3NC0uMzgwOC4zMTYxLS44MDk2LjM1Mi0uMDIzNy0uMDM1OS0uMDE0My0uMDU5Mi4wMDU5LS4wODExLjEyMDctLjEzOTkuMTI5NS0uMzA0Ni4zMzU2LS4zNjQzLS4yMTIyLS4wMzM0LS4zODk5LjA4MzMtLjU2ODYuMTc1Ny0uMjMyMy4wOTUtLjIzMDQtLjIxNDEtLjU4NzguMDE2NC0uMDM5Ni0uMDMyMi0uMDIwOC0uMDYxNS4wMDE4LS4wODY0LjA5MDgtLjExMDcuMjEwMi0uMTI3LjM0NS0uMTIwOC0uNjYzLS4zNjg2LS45NzUxLjQ1MDctMS4yODEzLjA0MzItLjA5Mi4wMjQzLS4xMjY1LjEwNjgtLjE4NDUuMTY1Mi0uMDUtLjA1NDgtLjAxMjMtLjEyMTItLjAwOTktLjE4NTctLjA1OTgtLjAyOC0uMTM1Ni0uMDQxLS4xMTc5LS4xMzY2LS4xMTcxLS4wMzk1LS4xOTg4LjAyOTUtLjI4Ni4wOTUyLS4wNzg3LS4wNjA4LjA1MzItLjE0OTIuMDc3Ni0uMjEyNS4wNzAyLS4xMjE2LjIzLS4wMjUuMzExMS0uMTEyNi4yMzA2LS4xMzA4LjU1Mi4wODE0LjgxNTUuMDQ1NS4yMDMuMDI1NS40NTQ0LS4xODI1LjM1MjYtLjM5LS4yMTcxLS4yNzY3LS4xNzktLjYzODYtLjE4MzktLjk2OTUtLjAyNjgtLjE5MjktLjQ5MS0uNDM4Mi0uNjI1Mi0uNjQ2Mi0uMTY1OS0uMTg3My0uMjk1LS40MDQ3LS40MjQzLS42MTgyLS40NjY2LS45MDA4LS4zMTk4LTIuMDU4NC0uOTA3Ny0yLjg5NDctLjI2Ni4xNDY2LS42MTI1LjA3NzQtLjg0MTgtLjExOS0uMTIzOC4xMTI1LS4xMjkyLjI1OTgtLjEzOS40MTYxLS4yOTctLjI5NjItLjI1OTMtLjg1NTktLjAyMi0xLjE4NTUuMDk2OS0uMTMwMi4yMTI3LS4yMzczLjM0Mi0uMzMxNi4wMjkyLS4wMjEzLjAzOTEtLjA0MTkuMDM4NS0uMDc0Ny4xMTc0LS41MjY3LjU3NjQtLjczOTEgMS4wNjk0LS43MjY3bTEyLjQwNzEuNDZjLjU1NzUgMCAxLjA4MDYuMjE1OSAxLjQ3NC42MDgycy42MS45MTQ1LjYxIDEuNDcwNGMwIC41NTYtLjIxNjcgMS4wNzgtLjYxIDEuNDY5OHYuMDAwNmwtLjkwMi44OTk1YTIuMDggMi4wOCAwIDAgMS0uODU5Ny41MTY2bC0uMDE2NC4wMDQ3LS4wMDU4LjAxNjRhMi4wNSAyLjA1IDAgMCAxLS40NzQuNzMwOGwtLjkwMTguODk5NWMtLjM5MzQuMzkyNC0uOTE3LjYwODMtMS40NzQ1LjYwODNzLTEuMDgwNi0uMjE2LTEuNDc0LS42MDgzYy0uODEzLS44MTA3LS44MTMtMi4xMjk0IDAtMi45NDAybC45MDE5LS44OTk1YTIuMDU2IDIuMDU2IDAgMCAxIC44NTgtLjUxNDNsLjAxNy0uMDA1My4wMDU4LS4wMTU4YTIuMDcgMi4wNyAwIDAgMSAuNDc1Mi0uNzMzN2wuOTAxOC0uODk5NWMuMzkzNC0uMzkyNC45MTcxLS42MDgzIDEuNDc0NS0uNjA4M3ptMCAuODk2NWExLjE4IDEuMTggMCAwIDAtLjgzODguMzQ2MmwtLjkwMTguODk5NWExLjE4MSAxLjE4MSAwIDAgMC0uMzQyNy45MjUybC4wMDUzLjA1NzJjLjAzMjMuMjY1Mi4xNDkuNTA0NC4zMzc0LjY5MTcuMTMuMTI5Ni4yNzMzLjIxMTQuNDQ3MS4yNjg2YS45LjkgMCAwIDEgLjAxNC4xNTgyLjg4NC44ODQgMCAwIDEtLjI2MDkuNjMwNGwtLjA1NTQuMDU1NGMtLjMwMTMtLjEwMjgtLjU1MjUtLjI1My0uNzc5NC0uNDc5MmEyLjA2IDIuMDYgMCAwIDEtLjU3NjEtMS4wOTY4bC0uMDA5OS0uMDU3OC0uMDQ2MS4wMzY4YTEuMSAxLjEgMCAwIDAtLjA4NzYuMDc5NGwtLjkwMjQuODk5NWMtLjQ2MjMuNDYxLS40NjIzIDEuMjEyIDAgMS42NzMuMjMxMS4yMzA1LjUzNS4zNDYuODM5NC4zNDYxLjMwNDMgMCAuNjA3Ny0uMTE1Ni44Mzg4LS4zNDYybC45MDE5LS44OTk1Yy40NjIzLS40NjEuNDYyMy0xLjIxMTMgMC0xLjY3M2ExLjE3IDEuMTcgMCAwIDAtLjQzNjctLjI3NDkgMSAxIDAgMCAxLS4wMTQtLjE2MTFjMC0uMjU5MS4xMDIzLS41MDUuMjkwMS0uNjkyMy4zMDE5LjEwMjguNTcuMjY5NC43OTYyLjQ5NS4zMDA3LjI5OTkuNDk5NC42NzkuNTc1NiAxLjA5NjhsLjAxMDUuMDU3OC4wNDU1LS4wMzczYTEuMSAxLjEgMCAwIDAgLjA4ODctLjA3OTRsLjkwMi0uODk5NmMuNDYyMi0uNDYxLjQ2MjgtMS4yMTI0IDAtMS42NzM1YTEuMTggMS4xOCAwIDAgMC0uODM5NS0uMzQ2MlptLTkuOTczIDUuMTU2Ny0uMDAwNi4wMDA2Yy0uMDc5My4zMDc4LS4xMDQ4LjgzMTgtLjUwNi44NDctLjAzMy4xNzc2LjEyMjguMjQ0NS4yNjU1LjE4NzQuMTQxLS4wNjQ1LjIwODEuMDUwOC4yNTU3LjE2NTcuMjE3Ny4wMzE3LjUzOTQtLjA3MjUuNTUxNi0uMzI5OC0uMzI1LS4xODY3LS40MjUzLS41NDE4LS41NjYyLS44NzA5Ii8+PC9zdmc+", "hubId": "hub_group-agents"}, "position": {"x": 1073, "y": -45}, "classes": "type-agent has-logo"}, {"data": {"id": "reg-llamaindex", "label": "LlamaIndex (cataloged)", "parent_group": "group-agents", "nodeType": "agent", "version": "unknown", "tooltip": "Cataloged orchestration framework for RAG and data-connected LLM apps, MIT license", "issues": [], "issuesText": "", "hasIssues": false, "color": "#bc8cff", "borderColor": "#bc8cff", "bgColor": "#1e1240", "iconDataUri": "", "hubId": "hub_group-agents"}, "position": {"x": 1073, "y": 85}, "classes": "type-agent"}, {"data": {"id": "reg-haystack", "label": "Haystack (cataloged)", "parent_group": "group-agents", "nodeType": "agent", "version": "unknown", "tooltip": "Cataloged orchestration framework by deepset, Apache-2.0, NLP pipeline builder", "issues": [], "issuesText": "", "hasIssues": false, "color": "#bc8cff", "borderColor": "#bc8cff", "bgColor": "#1e1240", "iconDataUri": "", "hubId": "hub_group-agents"}, "position": {"x": 960, "y": 150}, "classes": "type-agent"}, {"data": {"id": "reg-mcp", "label": "MCP - Model Context Protocol (cataloged)", "parent_group": "group-agents", "nodeType": "agent", "version": "unknown", "tooltip": "Cataloged agent protocol by Anthropic for tool/context integration, MIT license", "issues": [], "issuesText": "", "hasIssues": false, "color": "#bc8cff", "borderColor": "#bc8cff", "bgColor": "#1e1240", "iconDataUri": "", "hubId": "hub_group-agents"}, "position": {"x": 847, "y": 85}, "classes": "type-agent"}, {"data": {"id": "reg-a2a", "label": "A2A SDK (cataloged)", "parent_group": "group-agents", "nodeType": "agent", "version": "unknown", "tooltip": "Cataloged agent-to-agent protocol SDK by Google, Apache-2.0", "issues": [], "issuesText": "", "hasIssues": false, "color": "#bc8cff", "borderColor": "#bc8cff", "bgColor": "#1e1240", "iconDataUri": "", "hubId": "hub_group-agents"}, "position": {"x": 847, "y": -45}, "classes": "type-agent"}, {"data": {"id": "reg-semantic-router", "label": "Semantic Router (cataloged)", "parent_group": "group-agents", "nodeType": "agent", "version": "unknown", "tooltip": "Cataloged semantic routing library by Aurelio AI, MIT license", "issues": [], "issuesText": "", "hasIssues": false, "color": "#bc8cff", "borderColor": "#bc8cff", "bgColor": "#1e1240", "iconDataUri": "", "hubId": "hub_group-agents"}, "position": {"x": 1159, "y": -95}, "classes": "type-agent"}, {"data": {"id": "anthropic-sdk", "label": "Anthropic Python SDK", "parent_group": "group-llm", "nodeType": "llm", "version": "unknown", "tooltip": "Python SDK used to call the Anthropic Claude API for code analysis and report generation", "issues": [], "issuesText": "", "hasIssues": false, "color": "#3fb950", "borderColor": "#3fb950", "bgColor": "#0d2818", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPkFudGhyb3BpYzwvdGl0bGU+PHBhdGggZD0iTTE3LjMwNDEgMy41NDFoLTMuNjcxOGw2LjY5NiAxNi45MThIMjRabS0xMC42MDgyIDBMMCAyMC40NTloMy43NDQybDEuMzY5My0zLjU1MjdoNy4wMDUybDEuMzY5MyAzLjU1MjhoMy43NDQyTDEwLjUzNjMgMy41NDA5Wm0tLjM3MTIgMTAuMjIzMiAyLjI5MTQtNS45NDU2IDIuMjkxNCA1Ljk0NTZaIi8+PC9zdmc+", "hubId": "hub_group-llm"}, "position": {"x": 1480, "y": -110}, "classes": "type-llm has-logo"}, {"data": {"id": "reg-openai", "label": "OpenAI SDK (cataloged)", "parent_group": "group-llm", "nodeType": "llm", "version": "unknown", "tooltip": "Cataloged in AI-BOM registry for detection in scanned repos, Apache-2.0 LLM integration", "issues": [], "issuesText": "", "hasIssues": false, "color": "#3fb950", "borderColor": "#3fb950", "bgColor": "#0d2818", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPk9wZW5BSTwvdGl0bGU+PHBhdGggZD0iTTIyLjI4MTkgOS44MjExYTUuOTg0NyA1Ljk4NDcgMCAwIDAtLjUxNTctNC45MTA4IDYuMDQ2MiA2LjA0NjIgMCAwIDAtNi41MDk4LTIuOUE2LjA2NTEgNi4wNjUxIDAgMCAwIDQuOTgwNyA0LjE4MThhNS45ODQ3IDUuOTg0NyAwIDAgMC0zLjk5NzcgMi45IDYuMDQ2MiA2LjA0NjIgMCAwIDAgLjc0MjcgNy4wOTY2IDUuOTggNS45OCAwIDAgMCAuNTExIDQuOTEwNyA2LjA1MSA2LjA1MSAwIDAgMCA2LjUxNDYgMi45MDAxQTUuOTg0NyA1Ljk4NDcgMCAwIDAgMTMuMjU5OSAyNGE2LjA1NTcgNi4wNTU3IDAgMCAwIDUuNzcxOC00LjIwNTggNS45ODk0IDUuOTg5NCAwIDAgMCAzLjk5NzctMi45MDAxIDYuMDU1NyA2LjA1NTcgMCAwIDAtLjc0NzUtNy4wNzI5em0tOS4wMjIgMTIuNjA4MWE0LjQ3NTUgNC40NzU1IDAgMCAxLTIuODc2NC0xLjA0MDhsLjE0MTktLjA4MDQgNC43NzgzLTIuNzU4MmEuNzk0OC43OTQ4IDAgMCAwIC4zOTI3LS42ODEzdi02LjczNjlsMi4wMiAxLjE2ODZhLjA3MS4wNzEgMCAwIDEgLjAzOC4wNTJ2NS41ODI2YTQuNTA0IDQuNTA0IDAgMCAxLTQuNDk0NSA0LjQ5NDR6bS05LjY2MDctNC4xMjU0YTQuNDcwOCA0LjQ3MDggMCAwIDEtLjUzNDYtMy4wMTM3bC4xNDIuMDg1MiA0Ljc4MyAyLjc1ODJhLjc3MTIuNzcxMiAwIDAgMCAuNzgwNiAwbDUuODQyOC0zLjM2ODV2Mi4zMzI0YS4wODA0LjA4MDQgMCAwIDEtLjAzMzIuMDYxNUw5Ljc0IDE5Ljk1MDJhNC40OTkyIDQuNDk5MiAwIDAgMS02LjE0MDgtMS42NDY0ek0yLjM0MDggNy44OTU2YTQuNDg1IDQuNDg1IDAgMCAxIDIuMzY1NS0xLjk3MjhWMTEuNmEuNzY2NC43NjY0IDAgMCAwIC4zODc5LjY3NjVsNS44MTQ0IDMuMzU0My0yLjAyMDEgMS4xNjg1YS4wNzU3LjA3NTcgMCAwIDEtLjA3MSAwbC00LjgzMDMtMi43ODY1QTQuNTA0IDQuNTA0IDAgMCAxIDIuMzQwOCA3Ljg3MnptMTYuNTk2MyAzLjg1NThMMTMuMTAzOCA4LjM2NCAxNS4xMTkyIDcuMmEuMDc1Ny4wNzU3IDAgMCAxIC4wNzEgMGw0LjgzMDMgMi43OTEzYTQuNDk0NCA0LjQ5NDQgMCAwIDEtLjY3NjUgOC4xMDQydi01LjY3NzJhLjc5Ljc5IDAgMCAwLS40MDctLjY2N3ptMi4wMTA3LTMuMDIzMWwtLjE0Mi0uMDg1Mi00Ljc3MzUtMi43ODE4YS43NzU5Ljc3NTkgMCAwIDAtLjc4NTQgMEw5LjQwOSA5LjIyOTdWNi44OTc0YS4wNjYyLjA2NjIgMCAwIDEgLjAyODQtLjA2MTVsNC44MzAzLTIuNzg2NmE0LjQ5OTIgNC40OTkyIDAgMCAxIDYuNjgwMiA0LjY2ek04LjMwNjUgMTIuODYzbC0yLjAyLTEuMTYzOGEuMDgwNC4wODA0IDAgMCAxLS4wMzgtLjA1NjdWNi4wNzQyYTQuNDk5MiA0LjQ5OTIgMCAwIDEgNy4zNzU3LTMuNDUzN2wtLjE0Mi4wODA1TDguNzA0IDUuNDU5YS43OTQ4Ljc5NDggMCAwIDAtLjM5MjcuNjgxM3ptMS4wOTc2LTIuMzY1NGwyLjYwMi0xLjQ5OTggMi42MDY5IDEuNDk5OHYyLjk5OTRsLTIuNTk3NCAxLjQ5OTctMi42MDY3LTEuNDk5N1oiLz48L3N2Zz4=", "hubId": "hub_group-llm"}, "position": {"x": 1593, "y": -45}, "classes": "type-llm has-logo"}, {"data": {"id": "reg-google-genai", "label": "Google Generative AI SDK (cataloged)", "parent_group": "group-llm", "nodeType": "llm", "version": "unknown", "tooltip": "Cataloged in AI-BOM registry for detection \u2014 covers google-generativeai, google-genai, Vertex AI", "issues": [], "issuesText": "", "hasIssues": false, "color": "#3fb950", "borderColor": "#3fb950", "bgColor": "#0d2818", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPkdvb2dsZTwvdGl0bGU+PHBhdGggZD0iTTEyLjQ4IDEwLjkydjMuMjhoNy44NGMtLjI0IDEuODQtLjg1MyAzLjE4Ny0xLjc4NyA0LjEzMy0xLjE0NyAxLjE0Ny0yLjkzMyAyLjQtNi4wNTMgMi40LTQuODI3IDAtOC42LTMuODkzLTguNi04LjcyczMuNzczLTguNzIgOC42LTguNzJjMi42IDAgNC41MDcgMS4wMjcgNS45MDcgMi4zNDdsMi4zMDctMi4zMDdDMTguNzQ3IDEuNDQgMTYuMTMzIDAgMTIuNDggMCA1Ljg2NyAwIC4zMDcgNS4zODcuMzA3IDEyczUuNTYgMTIgMTIuMTczIDEyYzMuNTczIDAgNi4yNjctMS4xNzMgOC4zNzMtMy4zNiAyLjE2LTIuMTYgMi44NC01LjIxMyAyLjg0LTcuNjY3IDAtLjc2LS4wNTMtMS40NjctLjE3My0yLjA1M0gxMi40OHoiLz48L3N2Zz4=", "hubId": "hub_group-llm"}, "position": {"x": 1593, "y": 85}, "classes": "type-llm has-logo"}, {"data": {"id": "reg-cohere", "label": "Cohere SDK (cataloged)", "parent_group": "group-llm", "nodeType": "llm", "version": "unknown", "tooltip": "Cataloged in AI-BOM registry for detection in scanned repos, MIT license", "issues": [], "issuesText": "", "hasIssues": false, "color": "#3fb950", "borderColor": "#3fb950", "bgColor": "#0d2818", "iconDataUri": "", "hubId": "hub_group-llm"}, "position": {"x": 1480, "y": 150}, "classes": "type-llm"}, {"data": {"id": "reg-mistralai", "label": "Mistral AI SDK (cataloged)", "parent_group": "group-llm", "nodeType": "llm", "version": "unknown", "tooltip": "Cataloged in AI-BOM registry for detection in scanned repos, Apache-2.0", "issues": [], "issuesText": "", "hasIssues": false, "color": "#3fb950", "borderColor": "#3fb950", "bgColor": "#0d2818", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPk1pc3RyYWwgQUk8L3RpdGxlPjxwYXRoIGQ9Ik0xNy4xNDMgMy40Mjl2My40MjhoLTMuNDI5djMuNDI5aC0zLjQyOFY2Ljg1N0g2Ljg1N1YzLjQzSDMuNDN2MTMuNzE0SDB2My40MjhoMTAuMjg2di0zLjQyOEg2Ljg1N3YtMy40MjloMy40Mjl2My40MjloMy40Mjl2LTMuNDI5aDMuNDI4djMuNDI5aC0zLjQyOHYzLjQyOEgyNHYtMy40MjhoLTMuNDNWMy40Mjl6Ii8+PC9zdmc+", "hubId": "hub_group-llm"}, "position": {"x": 1367, "y": 85}, "classes": "type-llm has-logo"}, {"data": {"id": "reg-groq", "label": "Groq SDK (cataloged)", "parent_group": "group-llm", "nodeType": "llm", "version": "unknown", "tooltip": "Cataloged in AI-BOM registry for detection in scanned repos, Apache-2.0", "issues": [], "issuesText": "", "hasIssues": false, "color": "#3fb950", "borderColor": "#3fb950", "bgColor": "#0d2818", "iconDataUri": "", "hubId": "hub_group-llm"}, "position": {"x": 1367, "y": -45}, "classes": "type-llm"}, {"data": {"id": "reg-together", "label": "Together AI SDK (cataloged)", "parent_group": "group-llm", "nodeType": "llm", "version": "unknown", "tooltip": "Cataloged in AI-BOM registry for detection in scanned repos, Apache-2.0", "issues": [], "issuesText": "", "hasIssues": false, "color": "#3fb950", "borderColor": "#3fb950", "bgColor": "#0d2818", "iconDataUri": "", "hubId": "hub_group-llm"}, "position": {"x": 1679, "y": -95}, "classes": "type-llm"}, {"data": {"id": "reg-replicate", "label": "Replicate SDK (cataloged)", "parent_group": "group-llm", "nodeType": "llm", "version": "unknown", "tooltip": "Cataloged in AI-BOM registry for detection in scanned repos, Apache-2.0", "issues": [], "issuesText": "", "hasIssues": false, "color": "#3fb950", "borderColor": "#3fb950", "bgColor": "#0d2818", "iconDataUri": "", "hubId": "hub_group-llm"}, "position": {"x": 1679, "y": 135}, "classes": "type-llm"}, {"data": {"id": "reg-litellm", "label": "LiteLLM (cataloged)", "parent_group": "group-llm", "nodeType": "llm", "version": "unknown", "tooltip": "Cataloged LLM proxy by BerriAI, MIT license, enables multi-provider LLM routing", "issues": [], "issuesText": "", "hasIssues": false, "color": "#3fb950", "borderColor": "#3fb950", "bgColor": "#0d2818", "iconDataUri": "", "hubId": "hub_group-llm"}, "position": {"x": 1480, "y": 250}, "classes": "type-llm"}, {"data": {"id": "claude-api", "label": "Anthropic Claude API", "parent_group": "group-gateway", "nodeType": "gateway", "version": "unknown", "tooltip": "External Anthropic API endpoint that performs LLM inference for repository analysis", "issues": [], "issuesText": "", "hasIssues": false, "color": "#58a6ff", "borderColor": "#58a6ff", "bgColor": "#0d1f3c", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPkFudGhyb3BpYzwvdGl0bGU+PHBhdGggZD0iTTE3LjMwNDEgMy41NDFoLTMuNjcxOGw2LjY5NiAxNi45MThIMjRabS0xMC42MDgyIDBMMCAyMC40NTloMy43NDQybDEuMzY5My0zLjU1MjdoNy4wMDUybDEuMzY5MyAzLjU1MjhoMy43NDQyTDEwLjUzNjMgMy41NDA5Wm0tLjM3MTIgMTAuMjIzMiAyLjI5MTQtNS45NDU2IDIuMjkxNCA1Ljk0NTZaIi8+PC9zdmc+", "hubId": "hub_group-gateway"}, "position": {"x": -80, "y": 370}, "classes": "type-gateway has-logo"}, {"data": {"id": "huggingface-hub-api", "label": "Hugging Face Hub API", "parent_group": "group-gateway", "nodeType": "gateway", "version": "unknown", "tooltip": "External API used by download_top10.py to fetch model metadata for the top 10 most popular models", "issues": [], "issuesText": "", "hasIssues": false, "color": "#58a6ff", "borderColor": "#58a6ff", "bgColor": "#0d1f3c", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPkh1Z2dpbmcgRmFjZTwvdGl0bGU+PHBhdGggZD0iTTEyLjAyNSAxLjEzYy01Ljc3IDAtMTAuNDQ5IDQuNjQ3LTEwLjQ0OSAxMC4zNzggMCAxLjExMi4xNzggMi4xODEuNTAzIDMuMTg1LjA2NC0uMjIyLjIwMy0uNDQ0LjQxNi0uNTc3YS45Ni45NiAwIDAgMSAuNTI0LS4xNWMuMjkzIDAgLjU4NC4xMjQuODQuMjg0LjI3OC4xNzMuNDguNDA4LjcxLjY5NC4yMjYuMjgyLjQ1OC42MTEuNjg0Ljk1MXYtLjAxNGMuMDE3LS4zMjQuMTA2LS42MjIuMjY0LS44NzRzLjQwMy0uNDg3Ljc2Mi0uNTQzYy4zLS4wNDcuNTk2LjA2Ljc4Ny4yMDNzLjMxLjMxMy40LjQ2N2MuMTUuMjU3LjIxMi40NjguMjMzLjU0Mi4wMS4wMjYuNjUzIDEuNTUyIDEuNjU3IDIuNTQuNjE2LjYwNSAxLjAxIDEuMjIzIDEuMDgyIDEuOTEyLjA1NS41MzctLjA5NiAxLjA1OS0uMzggMS41NzIuNjM3LjEyMSAxLjI5NC4xODcgMS45NjcuMTg3LjY1NyAwIDEuMjk4LS4wNjMgMS45MjEtLjE3OC0uMjg3LS41MTctLjQ0LTEuMDQxLS4zODQtMS41ODEuMDctLjY5LjQ2NS0xLjMwNyAxLjA4MS0xLjkxMyAxLjAwNC0uOTg3IDEuNjQ3LTIuNTEzIDEuNjU3LTIuNTM5LjAyMS0uMDc0LjA4My0uMjg1LjIzMy0uNTQyLjA5LS4xNTQuMjA4LS4zMjMuNC0uNDY3YTEuMDggMS4wOCAwIDAgMSAuNzg3LS4yMDNjLjM1OS4wNTYuNjA0LjI5Ljc2Mi41NDNzLjI0Ny41NS4yNjUuODc0di4wMTVjLjIyNS0uMzQuNDU3LS42Ny42ODMtLjk1Mi4yMy0uMjg2LjQzMi0uNTIuNzEtLjY5NC4yNTctLjE2LjU0Ny0uMjg0Ljg0LS4yODVhLjk3Ljk3IDAgMCAxIC41MjQuMTUxYy4yMjguMTQzLjM3My4zODguNDMuNjI1bC4wMDYuMDRhMTAuMyAxMC4zIDAgMCAwIC41MzQtMy4yNzNjMC01LjczMS00LjY3OC0xMC4zNzgtMTAuNDQ5LTEwLjM3OE04LjMyNyA2LjU4M2ExLjUgMS41IDAgMCAxIC43MTMuMTc0IDEuNDg3IDEuNDg3IDAgMCAxIC42MTcgMi4wMTNjLS4xODMuMzQzLS43NjItLjIxNC0xLjEwMi0uMDk0LS4zOC4xMzQtLjUzMi45MTQtLjkxNy43MWExLjQ4NyAxLjQ4NyAwIDAgMSAuNjktMi44MDNtNy40ODYgMGExLjQ4NyAxLjQ4NyAwIDAgMSAuNjg5IDIuODAzYy0uMzg1LjIwNC0uNTM2LS41NzYtLjkxNi0uNzEtLjM0LS4xMi0uOTIuNDM3LTEuMTAzLjA5NGExLjQ4NyAxLjQ4NyAwIDAgMSAuNjE3LTIuMDEzIDEuNSAxLjUgMCAwIDEgLjcxMy0uMTc0bS0xMC42OCAxLjU1YS45Ni45NiAwIDEgMSAwIDEuOTIxLjk2Ljk2IDAgMCAxIDAtMS45Mm0xMy44MzggMGEuOTYuOTYgMCAxIDEgMCAxLjkyLjk2Ljk2IDAgMCAxIDAtMS45Mk04LjQ4OSAxMS40NThjLjU4OC4wMSAxLjk2NSAxLjE1NyAzLjU3MiAxLjE2NCAxLjYwNy0uMDA3IDIuOTg0LTEuMTU1IDMuNTcyLTEuMTY0LjE5Ni0uMDAzLjMwNS4xMi4zMDUuNDU0IDAgLjg4Ni0uNDI0IDIuMzI4LTEuNTYzIDMuMjAyLS4yMi0uNzU2LTEuMzk2LTEuMzY2LTEuNjMtMS4zMnEtLjAxMS4wMDEtLjAyLjAwNmwtLjA0NC4wMjYtLjAxLjAwOC0uMDMuMDI0cS0uMDE4LjAxNy0uMDM1LjAzNmwtLjAzMi4wNGExIDEgMCAwIDAtLjA1OC4wOWwtLjAxNC4wMjVxLS4wNDkuMDg4LS4xMS4xOWExIDEgMCAwIDEtLjA4My4xMTYgMS4yIDEuMiAwIDAgMS0uMTczLjE4cS0uMDM1LjAyOS0uMDc1LjA1OGExLjMgMS4zIDAgMCAxLS4yNTEtLjI0MyAxIDEgMCAwIDEtLjA3Ni0uMTA3Yy0uMTI0LS4xOTMtLjE3Ny0uMzYzLS4zMzctLjQ0NC0uMDM0LS4wMTYtLjEwNC0uMDA4LS4yLjAyMnEtLjA5NC4wMy0uMjE2LjA4Ny0uMDYuMDI4LS4xMjUuMDYzbC0uMTMuMDc0cS0uMDY3LjA0LS4xMzYuMDg2YTMgMyAwIDAgMC0uMTM1LjA5NiAzIDMgMCAwIDAtLjI2LjIxOSAyIDIgMCAwIDAtLjEyLjEyMSAyIDIgMCAwIDAtLjEwNi4xMjhsLS4wMDIuMDAyYTIgMiAwIDAgMC0uMDkuMTMybC0uMDAxLjAwMWExLjIgMS4yIDAgMCAwLS4xMDUuMjEycS0uMDEzLjAzNi0uMDI0LjA3M2MtMS4xMzktLjg3NS0xLjU2My0yLjMxNy0xLjU2My0zLjIwMyAwLS4zMzQuMTA5LS40NTcuMzA1LS40NTRtLjgzNiAxMC4zNTRjLjgyNC0xLjE5Ljc2Ni0yLjA4Mi0uMzY1LTMuMTk0LTEuMTMtMS4xMTItMS43ODktMi43MzgtMS43ODktMi43MzhzLS4yNDYtLjk0NS0uODA2LS44NTgtLjk3IDEuNDk5LjIwMiAyLjM2MmMxLjE3My44NjQtLjIzMyAxLjQ1LS42ODUuNjQtLjQ1LS44MTItMS42ODMtMi44OTYtMi4zMjItMy4yOTVzLTEuMDg5LS4xNzUtLjkzOC42NDcgMi44MjIgMi44MTMgMi41NjIgMy4yNDQtMS4xNzYtLjUwNi0xLjE3Ni0uNTA2LTIuODY2LTIuNTY3LTMuNDktMS44OTguNDczIDEuMjMgMi4wMzcgMi4xNmMxLjU2NC45MzIgMS42ODYgMS4xNzggMS40NjQgMS41M3MtMy42NzUtMi41MTEtNC0xLjI5N2MtLjMyMyAxLjIxNCAzLjUyNCAxLjU2NyAzLjI4NyAyLjQwNS0uMjM4LjgzOS0yLjcxLTEuNTg3LTMuMjE2LS42NDItLjUwNi45NDYgMy40OSAyLjA1NiAzLjUyMiAyLjA2NCAxLjI5LjMzIDQuNTY4IDEuMDI4IDUuNzEzLS42MjRtNS4zNDkgMGMtLjgyNC0xLjE5LS43NjYtMi4wODIuMzY1LTMuMTk0IDEuMTMtMS4xMTIgMS43ODktMi43MzggMS43ODktMi43MzhzLjI0Ni0uOTQ1LjgwNi0uODU4Ljk3IDEuNDk5LS4yMDIgMi4zNjJjLTEuMTczLjg2NC4yMzMgMS40NS42ODUuNjQuNDUxLS44MTIgMS42ODMtMi44OTYgMi4zMjItMy4yOTVzMS4wODktLjE3NS45MzguNjQ3LTIuODIyIDIuODEzLTIuNTYyIDMuMjQ0IDEuMTc2LS41MDYgMS4xNzYtLjUwNiAyLjg2Ni0yLjU2NyAzLjQ5LTEuODk4LS40NzMgMS4yMy0yLjAzNyAyLjE2Yy0xLjU2NC45MzItMS42ODYgMS4xNzgtMS40NjQgMS41M3MzLjY3NS0yLjUxMSA0LTEuMjk3Yy4zMjMgMS4yMTQtMy41MjQgMS41NjctMy4yODcgMi40MDUuMjM4LjgzOSAyLjcxLTEuNTg3IDMuMjE2LS42NDIuNTA2Ljk0Ni0zLjQ5IDIuMDU2LTMuNTIyIDIuMDY0LTEuMjkuMzMtNC41NjggMS4wMjgtNS43MTMtLjYyNCIvPjwvc3ZnPg==", "hubId": "hub_group-gateway"}, "position": {"x": 33, "y": 435}, "classes": "type-gateway has-logo"}, {"data": {"id": "aibom-py", "label": "AI-BOM Generator (aibom.py)", "parent_group": "group-frameworks", "nodeType": "framework", "version": "1.0.0", "tooltip": "Generates CycloneDX 1.7 AI Bill of Materials with OWASP AI BOM extensions from scan results", "issues": [], "issuesText": "", "hasIssues": false, "color": "#79c0ff", "borderColor": "#79c0ff", "bgColor": "#0a1929", "iconDataUri": "", "hubId": "hub_group-frameworks"}, "position": {"x": 440, "y": 370}, "classes": "type-framework"}, {"data": {"id": "topology-py", "label": "Topology Generator (topology.py)", "parent_group": "group-frameworks", "nodeType": "framework", "version": "1.0.0", "tooltip": "Builds interactive AI system topology visualization from Claude's structured JSON response", "issues": [], "issuesText": "", "hasIssues": false, "color": "#79c0ff", "borderColor": "#79c0ff", "bgColor": "#0a1929", "iconDataUri": "", "hubId": "hub_group-frameworks"}, "position": {"x": 553, "y": 435}, "classes": "type-framework"}, {"data": {"id": "requests-lib", "label": "requests", "parent_group": "group-frameworks", "nodeType": "framework", "version": "unknown", "tooltip": "Python HTTP library used for API calls including Hugging Face Hub and PyPI lookups", "issues": [], "issuesText": "", "hasIssues": false, "color": "#79c0ff", "borderColor": "#79c0ff", "bgColor": "#0a1929", "iconDataUri": "", "hubId": "hub_group-frameworks"}, "position": {"x": 553, "y": 565}, "classes": "type-framework"}, {"data": {"id": "reg-torch", "label": "PyTorch (cataloged)", "parent_group": "group-frameworks", "nodeType": "framework", "version": "unknown", "tooltip": "Cataloged ML framework by Meta, BSD-3-Clause", "issues": [], "issuesText": "", "hasIssues": false, "color": "#79c0ff", "borderColor": "#79c0ff", "bgColor": "#0a1929", "iconDataUri": "", "hubId": "hub_group-frameworks"}, "position": {"x": 440, "y": 630}, "classes": "type-framework"}, {"data": {"id": "reg-tensorflow", "label": "TensorFlow (cataloged)", "parent_group": "group-frameworks", "nodeType": "framework", "version": "unknown", "tooltip": "Cataloged ML framework by Google, Apache-2.0", "issues": [], "issuesText": "", "hasIssues": false, "color": "#79c0ff", "borderColor": "#79c0ff", "bgColor": "#0a1929", "iconDataUri": "", "hubId": "hub_group-frameworks"}, "position": {"x": 327, "y": 565}, "classes": "type-framework"}, {"data": {"id": "reg-transformers", "label": "Hugging Face Transformers (cataloged)", "parent_group": "group-frameworks", "nodeType": "framework", "version": "unknown", "tooltip": "Cataloged ML framework by Hugging Face, Apache-2.0, model inference and fine-tuning", "issues": [], "issuesText": "", "hasIssues": false, "color": "#79c0ff", "borderColor": "#79c0ff", "bgColor": "#0a1929", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPkh1Z2dpbmcgRmFjZTwvdGl0bGU+PHBhdGggZD0iTTEyLjAyNSAxLjEzYy01Ljc3IDAtMTAuNDQ5IDQuNjQ3LTEwLjQ0OSAxMC4zNzggMCAxLjExMi4xNzggMi4xODEuNTAzIDMuMTg1LjA2NC0uMjIyLjIwMy0uNDQ0LjQxNi0uNTc3YS45Ni45NiAwIDAgMSAuNTI0LS4xNWMuMjkzIDAgLjU4NC4xMjQuODQuMjg0LjI3OC4xNzMuNDguNDA4LjcxLjY5NC4yMjYuMjgyLjQ1OC42MTEuNjg0Ljk1MXYtLjAxNGMuMDE3LS4zMjQuMTA2LS42MjIuMjY0LS44NzRzLjQwMy0uNDg3Ljc2Mi0uNTQzYy4zLS4wNDcuNTk2LjA2Ljc4Ny4yMDNzLjMxLjMxMy40LjQ2N2MuMTUuMjU3LjIxMi40NjguMjMzLjU0Mi4wMS4wMjYuNjUzIDEuNTUyIDEuNjU3IDIuNTQuNjE2LjYwNSAxLjAxIDEuMjIzIDEuMDgyIDEuOTEyLjA1NS41MzctLjA5NiAxLjA1OS0uMzggMS41NzIuNjM3LjEyMSAxLjI5NC4xODcgMS45NjcuMTg3LjY1NyAwIDEuMjk4LS4wNjMgMS45MjEtLjE3OC0uMjg3LS41MTctLjQ0LTEuMDQxLS4zODQtMS41ODEuMDctLjY5LjQ2NS0xLjMwNyAxLjA4MS0xLjkxMyAxLjAwNC0uOTg3IDEuNjQ3LTIuNTEzIDEuNjU3LTIuNTM5LjAyMS0uMDc0LjA4My0uMjg1LjIzMy0uNTQyLjA5LS4xNTQuMjA4LS4zMjMuNC0uNDY3YTEuMDggMS4wOCAwIDAgMSAuNzg3LS4yMDNjLjM1OS4wNTYuNjA0LjI5Ljc2Mi41NDNzLjI0Ny41NS4yNjUuODc0di4wMTVjLjIyNS0uMzQuNDU3LS42Ny42ODMtLjk1Mi4yMy0uMjg2LjQzMi0uNTIuNzEtLjY5NC4yNTctLjE2LjU0Ny0uMjg0Ljg0LS4yODVhLjk3Ljk3IDAgMCAxIC41MjQuMTUxYy4yMjguMTQzLjM3My4zODguNDMuNjI1bC4wMDYuMDRhMTAuMyAxMC4zIDAgMCAwIC41MzQtMy4yNzNjMC01LjczMS00LjY3OC0xMC4zNzgtMTAuNDQ5LTEwLjM3OE04LjMyNyA2LjU4M2ExLjUgMS41IDAgMCAxIC43MTMuMTc0IDEuNDg3IDEuNDg3IDAgMCAxIC42MTcgMi4wMTNjLS4xODMuMzQzLS43NjItLjIxNC0xLjEwMi0uMDk0LS4zOC4xMzQtLjUzMi45MTQtLjkxNy43MWExLjQ4NyAxLjQ4NyAwIDAgMSAuNjktMi44MDNtNy40ODYgMGExLjQ4NyAxLjQ4NyAwIDAgMSAuNjg5IDIuODAzYy0uMzg1LjIwNC0uNTM2LS41NzYtLjkxNi0uNzEtLjM0LS4xMi0uOTIuNDM3LTEuMTAzLjA5NGExLjQ4NyAxLjQ4NyAwIDAgMSAuNjE3LTIuMDEzIDEuNSAxLjUgMCAwIDEgLjcxMy0uMTc0bS0xMC42OCAxLjU1YS45Ni45NiAwIDEgMSAwIDEuOTIxLjk2Ljk2IDAgMCAxIDAtMS45Mm0xMy44MzggMGEuOTYuOTYgMCAxIDEgMCAxLjkyLjk2Ljk2IDAgMCAxIDAtMS45Mk04LjQ4OSAxMS40NThjLjU4OC4wMSAxLjk2NSAxLjE1NyAzLjU3MiAxLjE2NCAxLjYwNy0uMDA3IDIuOTg0LTEuMTU1IDMuNTcyLTEuMTY0LjE5Ni0uMDAzLjMwNS4xMi4zMDUuNDU0IDAgLjg4Ni0uNDI0IDIuMzI4LTEuNTYzIDMuMjAyLS4yMi0uNzU2LTEuMzk2LTEuMzY2LTEuNjMtMS4zMnEtLjAxMS4wMDEtLjAyLjAwNmwtLjA0NC4wMjYtLjAxLjAwOC0uMDMuMDI0cS0uMDE4LjAxNy0uMDM1LjAzNmwtLjAzMi4wNGExIDEgMCAwIDAtLjA1OC4wOWwtLjAxNC4wMjVxLS4wNDkuMDg4LS4xMS4xOWExIDEgMCAwIDEtLjA4My4xMTYgMS4yIDEuMiAwIDAgMS0uMTczLjE4cS0uMDM1LjAyOS0uMDc1LjA1OGExLjMgMS4zIDAgMCAxLS4yNTEtLjI0MyAxIDEgMCAwIDEtLjA3Ni0uMTA3Yy0uMTI0LS4xOTMtLjE3Ny0uMzYzLS4zMzctLjQ0NC0uMDM0LS4wMTYtLjEwNC0uMDA4LS4yLjAyMnEtLjA5NC4wMy0uMjE2LjA4Ny0uMDYuMDI4LS4xMjUuMDYzbC0uMTMuMDc0cS0uMDY3LjA0LS4xMzYuMDg2YTMgMyAwIDAgMC0uMTM1LjA5NiAzIDMgMCAwIDAtLjI2LjIxOSAyIDIgMCAwIDAtLjEyLjEyMSAyIDIgMCAwIDAtLjEwNi4xMjhsLS4wMDIuMDAyYTIgMiAwIDAgMC0uMDkuMTMybC0uMDAxLjAwMWExLjIgMS4yIDAgMCAwLS4xMDUuMjEycS0uMDEzLjAzNi0uMDI0LjA3M2MtMS4xMzktLjg3NS0xLjU2My0yLjMxNy0xLjU2My0zLjIwMyAwLS4zMzQuMTA5LS40NTcuMzA1LS40NTRtLjgzNiAxMC4zNTRjLjgyNC0xLjE5Ljc2Ni0yLjA4Mi0uMzY1LTMuMTk0LTEuMTMtMS4xMTItMS43ODktMi43MzgtMS43ODktMi43MzhzLS4yNDYtLjk0NS0uODA2LS44NTgtLjk3IDEuNDk5LjIwMiAyLjM2MmMxLjE3My44NjQtLjIzMyAxLjQ1LS42ODUuNjQtLjQ1LS44MTItMS42ODMtMi44OTYtMi4zMjItMy4yOTVzLTEuMDg5LS4xNzUtLjkzOC42NDcgMi44MjIgMi44MTMgMi41NjIgMy4yNDQtMS4xNzYtLjUwNi0xLjE3Ni0uNTA2LTIuODY2LTIuNTY3LTMuNDktMS44OTguNDczIDEuMjMgMi4wMzcgMi4xNmMxLjU2NC45MzIgMS42ODYgMS4xNzggMS40NjQgMS41M3MtMy42NzUtMi41MTEtNC0xLjI5N2MtLjMyMyAxLjIxNCAzLjUyNCAxLjU2NyAzLjI4NyAyLjQwNS0uMjM4LjgzOS0yLjcxLTEuNTg3LTMuMjE2LS42NDItLjUwNi45NDYgMy40OSAyLjA1NiAzLjUyMiAyLjA2NCAxLjI5LjMzIDQuNTY4IDEuMDI4IDUuNzEzLS42MjRtNS4zNDkgMGMtLjgyNC0xLjE5LS43NjYtMi4wODIuMzY1LTMuMTk0IDEuMTMtMS4xMTIgMS43ODktMi43MzggMS43ODktMi43MzhzLjI0Ni0uOTQ1LjgwNi0uODU4Ljk3IDEuNDk5LS4yMDIgMi4zNjJjLTEuMTczLjg2NC4yMzMgMS40NS42ODUuNjQuNDUxLS44MTIgMS42ODMtMi44OTYgMi4zMjItMy4yOTVzMS4wODktLjE3NS45MzguNjQ3LTIuODIyIDIuODEzLTIuNTYyIDMuMjQ0IDEuMTc2LS41MDYgMS4xNzYtLjUwNiAyLjg2Ni0yLjU2NyAzLjQ5LTEuODk4LS40NzMgMS4yMy0yLjAzNyAyLjE2Yy0xLjU2NC45MzItMS42ODYgMS4xNzgtMS40NjQgMS41M3MzLjY3NS0yLjUxMSA0LTEuMjk3Yy4zMjMgMS4yMTQtMy41MjQgMS41NjctMy4yODcgMi40MDUuMjM4LjgzOSAyLjcxLTEuNTg3IDMuMjE2LS42NDIuNTA2Ljk0Ni0zLjQ5IDIuMDU2LTMuNTIyIDIuMDY0LTEuMjkuMzMtNC41NjggMS4wMjgtNS43MTMtLjYyNCIvPjwvc3ZnPg==", "hubId": "hub_group-frameworks"}, "position": {"x": 327, "y": 435}, "classes": "type-framework has-logo"}, {"data": {"id": "reg-keras", "label": "Keras (cataloged)", "parent_group": "group-frameworks", "nodeType": "framework", "version": "unknown", "tooltip": "Cataloged ML framework by Google, Apache-2.0, high-level neural network API", "issues": [], "issuesText": "", "hasIssues": false, "color": "#79c0ff", "borderColor": "#79c0ff", "bgColor": "#0a1929", "iconDataUri": "", "hubId": "hub_group-frameworks"}, "position": {"x": 639, "y": 385}, "classes": "type-framework"}, {"data": {"id": "reg-jax", "label": "JAX (cataloged)", "parent_group": "group-frameworks", "nodeType": "framework", "version": "unknown", "tooltip": "Cataloged ML framework by Google, Apache-2.0, composable transformations", "issues": [], "issuesText": "", "hasIssues": false, "color": "#79c0ff", "borderColor": "#79c0ff", "bgColor": "#0a1929", "iconDataUri": "", "hubId": "hub_group-frameworks"}, "position": {"x": 639, "y": 615}, "classes": "type-framework"}, {"data": {"id": "reg-sklearn", "label": "scikit-learn (cataloged)", "parent_group": "group-frameworks", "nodeType": "framework", "version": "unknown", "tooltip": "Cataloged ML framework, BSD-3-Clause, classical machine learning algorithms", "issues": [], "issuesText": "", "hasIssues": false, "color": "#79c0ff", "borderColor": "#79c0ff", "bgColor": "#0a1929", "iconDataUri": "", "hubId": "hub_group-frameworks"}, "position": {"x": 440, "y": 730}, "classes": "type-framework"}, {"data": {"id": "reg-spacy", "label": "spaCy (cataloged)", "parent_group": "group-frameworks", "nodeType": "framework", "version": "unknown", "tooltip": "Cataloged NLP framework by Explosion, MIT license", "issues": [], "issuesText": "", "hasIssues": false, "color": "#79c0ff", "borderColor": "#79c0ff", "bgColor": "#0a1929", "iconDataUri": "", "hubId": "hub_group-frameworks"}, "position": {"x": 241, "y": 615}, "classes": "type-framework"}, {"data": {"id": "reg-diffusers", "label": "Diffusers (cataloged)", "parent_group": "group-frameworks", "nodeType": "framework", "version": "unknown", "tooltip": "Cataloged generative image library by Hugging Face, Apache-2.0", "issues": [], "issuesText": "", "hasIssues": false, "color": "#79c0ff", "borderColor": "#79c0ff", "bgColor": "#0a1929", "iconDataUri": "", "hubId": "hub_group-frameworks"}, "position": {"x": 241, "y": 385}, "classes": "type-framework"}, {"data": {"id": "model-registry", "label": "Local Model Metadata Store (models/)", "parent_group": "group-data", "nodeType": "database", "version": "unknown", "tooltip": "Local directory containing cached metadata JSON files for top 10 Hugging Face models", "issues": [], "issuesText": "", "hasIssues": false, "color": "#58a6ff", "borderColor": "#58a6ff", "bgColor": "#0d1a30", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPk1ldGE8L3RpdGxlPjxwYXRoIGQ9Ik02LjkxNSA0LjAzYy0xLjk2OCAwLTMuNjgzIDEuMjgtNC44NzEgMy4xMTNDLjcwNCA5LjIwOCAwIDExLjg4MyAwIDE0LjQ0OWMwIC43MDYuMDcgMS4zNjkuMjEgMS45NzNhNi42MjQgNi42MjQgMCAwIDAgLjI2NS44NiA1LjI5NyA1LjI5NyAwIDAgMCAuMzcxLjc2MWMuNjk2IDEuMTU5IDEuODE4IDEuOTI3IDMuNTkzIDEuOTI3IDEuNDk3IDAgMi42MzMtLjY3MSAzLjk2NS0yLjQ0NC43Ni0xLjAxMiAxLjE0NC0xLjYyNiAyLjY2My00LjMybC43NTYtMS4zMzkuMTg2LS4zMjVjLjA2MS4xLjEyMS4xOTYuMTgzLjNsMi4xNTIgMy41OTVjLjcyNCAxLjIxIDEuNjY1IDIuNTU2IDIuNDcgMy4zMTQgMS4wNDYuOTg3IDEuOTkyIDEuMjIgMy4wNiAxLjIyIDEuMDc1IDAgMS44NzYtLjM1NSAyLjQ1NS0uODQzYTMuNzQzIDMuNzQzIDAgMCAwIC44MS0uOTczYy41NDItLjkzOS44NjEtMi4xMjcuODYxLTMuNzQ1IDAtMi43Mi0uNjgxLTUuMzU3LTIuMDg0LTcuNDUtMS4yODItMS45MTItMi45NTctMi45My00LjcxNi0yLjkzLTEuMDQ3IDAtMi4wODguNDY3LTMuMDUzIDEuMzA4LS42NTIuNTctMS4yNTcgMS4yOS0xLjgyIDIuMDUtLjY5LS44NzUtMS4zMzUtMS41NDctMS45NTgtMi4wNTYtMS4xODItLjk2Ni0yLjMxNS0xLjMwMy0zLjQ1NC0xLjMwM3ptMTAuMTYgMi4wNTNjMS4xNDcgMCAyLjE4OC43NTggMi45OTIgMS45OTkgMS4xMzIgMS43NDggMS42NDcgNC4xOTUgMS42NDcgNi40IDAgMS41NDgtLjM2OCAyLjktMS44MzkgMi45LS41OCAwLTEuMDI3LS4yMy0xLjY2NC0xLjAwNC0uNDk2LS42MDEtMS4zNDMtMS44NzgtMi44MzItNC4zNThsLS42MTctMS4wMjhhNDQuOTA4IDQ0LjkwOCAwIDAgMC0xLjI1NS0xLjk4Yy4wNy0uMTA5LjE0MS0uMjI0LjIxMS0uMzI3IDEuMTItMS42NjcgMi4xMTgtMi42MDIgMy4zNTgtMi42MDJ6bS0xMC4yMDEuNTUzYzEuMjY1IDAgMi4wNTguNzkxIDIuNjc1IDEuNDQ2LjMwNy4zMjcuNzM3Ljg3MSAxLjIzNCAxLjU3OWwtMS4wMiAxLjU2NmMtLjc1NyAxLjE2My0xLjg4MiAzLjAxNy0yLjgzNyA0LjMzOC0xLjE5MSAxLjY0OS0xLjgxIDEuODE3LTIuNDg2IDEuODE3LS41MjQgMC0xLjAzOC0uMjM3LTEuMzgzLS43OTQtLjI2My0uNDI2LS40NjQtMS4xMy0uNDY0LTIuMDQ2IDAtMi4yMjEuNjMtNC41MzUgMS42Ni02LjA4OC40NTQtLjY4Ny45NjQtMS4yMjYgMS41MzMtMS41MzNhMi4yNjQgMi4yNjQgMCAwIDEgMS4wODgtLjI4NXoiLz48L3N2Zz4=", "hubId": "hub_group-data"}, "position": {"x": 960, "y": 500}, "classes": "type-database has-logo"}, {"data": {"id": "model-all-minilm-l6-v2", "label": "sentence-transformers/all-MiniLM-L6-v2", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Sentence similarity embedding model (206.9M downloads), Apache-2.0, used for feature extraction", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "", "hubId": "hub_group-models"}, "position": {"x": 1480, "y": 370}, "classes": "type-model"}, {"data": {"id": "model-bert-base-uncased", "label": "google-bert/bert-base-uncased", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Fill-mask language model by Google (71.7M downloads), Apache-2.0, trained on BookCorpus and Wikipedia", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPkdvb2dsZTwvdGl0bGU+PHBhdGggZD0iTTEyLjQ4IDEwLjkydjMuMjhoNy44NGMtLjI0IDEuODQtLjg1MyAzLjE4Ny0xLjc4NyA0LjEzMy0xLjE0NyAxLjE0Ny0yLjkzMyAyLjQtNi4wNTMgMi40LTQuODI3IDAtOC42LTMuODkzLTguNi04LjcyczMuNzczLTguNzIgOC42LTguNzJjMi42IDAgNC41MDcgMS4wMjcgNS45MDcgMi4zNDdsMi4zMDctMi4zMDdDMTguNzQ3IDEuNDQgMTYuMTMzIDAgMTIuNDggMCA1Ljg2NyAwIC4zMDcgNS4zODcuMzA3IDEyczUuNTYgMTIgMTIuMTczIDEyYzMuNTczIDAgNi4yNjctMS4xNzMgOC4zNzMtMy4zNiAyLjE2LTIuMTYgMi44NC01LjIxMyAyLjg0LTcuNjY3IDAtLjc2LS4wNTMtMS40NjctLjE3My0yLjA1M0gxMi40OHoiLz48L3N2Zz4=", "hubId": "hub_group-models"}, "position": {"x": 1593, "y": 435}, "classes": "type-model has-logo"}, {"data": {"id": "model-all-mpnet-base-v2", "label": "sentence-transformers/all-mpnet-base-v2", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Sentence similarity embedding model (28.9M downloads), Apache-2.0, MPNet architecture", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "", "hubId": "hub_group-models"}, "position": {"x": 1593, "y": 565}, "classes": "type-model"}, {"data": {"id": "model-paraphrase-multilingual", "label": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Multilingual sentence similarity model (26.5M downloads), Apache-2.0, supports 50+ languages", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "", "hubId": "hub_group-models"}, "position": {"x": 1480, "y": 630}, "classes": "type-model"}, {"data": {"id": "model-clip-vit-large", "label": "openai/clip-vit-large-patch14", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Zero-shot image classification model by OpenAI (23.3M downloads), CLIP architecture", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPk9wZW5BSTwvdGl0bGU+PHBhdGggZD0iTTIyLjI4MTkgOS44MjExYTUuOTg0NyA1Ljk4NDcgMCAwIDAtLjUxNTctNC45MTA4IDYuMDQ2MiA2LjA0NjIgMCAwIDAtNi41MDk4LTIuOUE2LjA2NTEgNi4wNjUxIDAgMCAwIDQuOTgwNyA0LjE4MThhNS45ODQ3IDUuOTg0NyAwIDAgMC0zLjk5NzcgMi45IDYuMDQ2MiA2LjA0NjIgMCAwIDAgLjc0MjcgNy4wOTY2IDUuOTggNS45OCAwIDAgMCAuNTExIDQuOTEwNyA2LjA1MSA2LjA1MSAwIDAgMCA2LjUxNDYgMi45MDAxQTUuOTg0NyA1Ljk4NDcgMCAwIDAgMTMuMjU5OSAyNGE2LjA1NTcgNi4wNTU3IDAgMCAwIDUuNzcxOC00LjIwNTggNS45ODk0IDUuOTg5NCAwIDAgMCAzLjk5NzctMi45MDAxIDYuMDU1NyA2LjA1NTcgMCAwIDAtLjc0NzUtNy4wNzI5em0tOS4wMjIgMTIuNjA4MWE0LjQ3NTUgNC40NzU1IDAgMCAxLTIuODc2NC0xLjA0MDhsLjE0MTktLjA4MDQgNC43NzgzLTIuNzU4MmEuNzk0OC43OTQ4IDAgMCAwIC4zOTI3LS42ODEzdi02LjczNjlsMi4wMiAxLjE2ODZhLjA3MS4wNzEgMCAwIDEgLjAzOC4wNTJ2NS41ODI2YTQuNTA0IDQuNTA0IDAgMCAxLTQuNDk0NSA0LjQ5NDR6bS05LjY2MDctNC4xMjU0YTQuNDcwOCA0LjQ3MDggMCAwIDEtLjUzNDYtMy4wMTM3bC4xNDIuMDg1MiA0Ljc4MyAyLjc1ODJhLjc3MTIuNzcxMiAwIDAgMCAuNzgwNiAwbDUuODQyOC0zLjM2ODV2Mi4zMzI0YS4wODA0LjA4MDQgMCAwIDEtLjAzMzIuMDYxNUw5Ljc0IDE5Ljk1MDJhNC40OTkyIDQuNDk5MiAwIDAgMS02LjE0MDgtMS42NDY0ek0yLjM0MDggNy44OTU2YTQuNDg1IDQuNDg1IDAgMCAxIDIuMzY1NS0xLjk3MjhWMTEuNmEuNzY2NC43NjY0IDAgMCAwIC4zODc5LjY3NjVsNS44MTQ0IDMuMzU0My0yLjAyMDEgMS4xNjg1YS4wNzU3LjA3NTcgMCAwIDEtLjA3MSAwbC00LjgzMDMtMi43ODY1QTQuNTA0IDQuNTA0IDAgMCAxIDIuMzQwOCA3Ljg3MnptMTYuNTk2MyAzLjg1NThMMTMuMTAzOCA4LjM2NCAxNS4xMTkyIDcuMmEuMDc1Ny4wNzU3IDAgMCAxIC4wNzEgMGw0LjgzMDMgMi43OTEzYTQuNDk0NCA0LjQ5NDQgMCAwIDEtLjY3NjUgOC4xMDQydi01LjY3NzJhLjc5Ljc5IDAgMCAwLS40MDctLjY2N3ptMi4wMTA3LTMuMDIzMWwtLjE0Mi0uMDg1Mi00Ljc3MzUtMi43ODE4YS43NzU5Ljc3NTkgMCAwIDAtLjc4NTQgMEw5LjQwOSA5LjIyOTdWNi44OTc0YS4wNjYyLjA2NjIgMCAwIDEgLjAyODQtLjA2MTVsNC44MzAzLTIuNzg2NmE0LjQ5OTIgNC40OTkyIDAgMCAxIDYuNjgwMiA0LjY2ek04LjMwNjUgMTIuODYzbC0yLjAyLTEuMTYzOGEuMDgwNC4wODA0IDAgMCAxLS4wMzgtLjA1NjdWNi4wNzQyYTQuNDk5MiA0LjQ5OTIgMCAwIDEgNy4zNzU3LTMuNDUzN2wtLjE0Mi4wODA1TDguNzA0IDUuNDU5YS43OTQ4Ljc5NDggMCAwIDAtLjM5MjcuNjgxM3ptMS4wOTc2LTIuMzY1NGwyLjYwMi0xLjQ5OTggMi42MDY5IDEuNDk5OHYyLjk5OTRsLTIuNTk3NCAxLjQ5OTctMi42MDY3LTEuNDk5N1oiLz48L3N2Zz4=", "hubId": "hub_group-models"}, "position": {"x": 1367, "y": 565}, "classes": "type-model has-logo"}, {"data": {"id": "model-clip-vit-base", "label": "openai/clip-vit-base-patch32", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Zero-shot image classification model by OpenAI (20.5M downloads), CLIP base variant", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPk9wZW5BSTwvdGl0bGU+PHBhdGggZD0iTTIyLjI4MTkgOS44MjExYTUuOTg0NyA1Ljk4NDcgMCAwIDAtLjUxNTctNC45MTA4IDYuMDQ2MiA2LjA0NjIgMCAwIDAtNi41MDk4LTIuOUE2LjA2NTEgNi4wNjUxIDAgMCAwIDQuOTgwNyA0LjE4MThhNS45ODQ3IDUuOTg0NyAwIDAgMC0zLjk5NzcgMi45IDYuMDQ2MiA2LjA0NjIgMCAwIDAgLjc0MjcgNy4wOTY2IDUuOTggNS45OCAwIDAgMCAuNTExIDQuOTEwNyA2LjA1MSA2LjA1MSAwIDAgMCA2LjUxNDYgMi45MDAxQTUuOTg0NyA1Ljk4NDcgMCAwIDAgMTMuMjU5OSAyNGE2LjA1NTcgNi4wNTU3IDAgMCAwIDUuNzcxOC00LjIwNTggNS45ODk0IDUuOTg5NCAwIDAgMCAzLjk5NzctMi45MDAxIDYuMDU1NyA2LjA1NTcgMCAwIDAtLjc0NzUtNy4wNzI5em0tOS4wMjIgMTIuNjA4MWE0LjQ3NTUgNC40NzU1IDAgMCAxLTIuODc2NC0xLjA0MDhsLjE0MTktLjA4MDQgNC43NzgzLTIuNzU4MmEuNzk0OC43OTQ4IDAgMCAwIC4zOTI3LS42ODEzdi02LjczNjlsMi4wMiAxLjE2ODZhLjA3MS4wNzEgMCAwIDEgLjAzOC4wNTJ2NS41ODI2YTQuNTA0IDQuNTA0IDAgMCAxLTQuNDk0NSA0LjQ5NDR6bS05LjY2MDctNC4xMjU0YTQuNDcwOCA0LjQ3MDggMCAwIDEtLjUzNDYtMy4wMTM3bC4xNDIuMDg1MiA0Ljc4MyAyLjc1ODJhLjc3MTIuNzcxMiAwIDAgMCAuNzgwNiAwbDUuODQyOC0zLjM2ODV2Mi4zMzI0YS4wODA0LjA4MDQgMCAwIDEtLjAzMzIuMDYxNUw5Ljc0IDE5Ljk1MDJhNC40OTkyIDQuNDk5MiAwIDAgMS02LjE0MDgtMS42NDY0ek0yLjM0MDggNy44OTU2YTQuNDg1IDQuNDg1IDAgMCAxIDIuMzY1NS0xLjk3MjhWMTEuNmEuNzY2NC43NjY0IDAgMCAwIC4zODc5LjY3NjVsNS44MTQ0IDMuMzU0My0yLjAyMDEgMS4xNjg1YS4wNzU3LjA3NTcgMCAwIDEtLjA3MSAwbC00LjgzMDMtMi43ODY1QTQuNTA0IDQuNTA0IDAgMCAxIDIuMzQwOCA3Ljg3MnptMTYuNTk2MyAzLjg1NThMMTMuMTAzOCA4LjM2NCAxNS4xMTkyIDcuMmEuMDc1Ny4wNzU3IDAgMCAxIC4wNzEgMGw0LjgzMDMgMi43OTEzYTQuNDk0NCA0LjQ5NDQgMCAwIDEtLjY3NjUgOC4xMDQydi01LjY3NzJhLjc5Ljc5IDAgMCAwLS40MDctLjY2N3ptMi4wMTA3LTMuMDIzMWwtLjE0Mi0uMDg1Mi00Ljc3MzUtMi43ODE4YS43NzU5Ljc3NTkgMCAwIDAtLjc4NTQgMEw5LjQwOSA5LjIyOTdWNi44OTc0YS4wNjYyLjA2NjIgMCAwIDEgLjAyODQtLjA2MTVsNC44MzAzLTIuNzg2NmE0LjQ5OTIgNC40OTkyIDAgMCAxIDYuNjgwMiA0LjY2ek04LjMwNjUgMTIuODYzbC0yLjAyLTEuMTYzOGEuMDgwNC4wODA0IDAgMCAxLS4wMzgtLjA1NjdWNi4wNzQyYTQuNDk5MiA0LjQ5OTIgMCAwIDEgNy4zNzU3LTMuNDUzN2wtLjE0Mi4wODA1TDguNzA0IDUuNDU5YS43OTQ4Ljc5NDggMCAwIDAtLjM5MjcuNjgxM3ptMS4wOTc2LTIuMzY1NGwyLjYwMi0xLjQ5OTggMi42MDY5IDEuNDk5OHYyLjk5OTRsLTIuNTk3NCAxLjQ5OTctMi42MDY3LTEuNDk5N1oiLz48L3N2Zz4=", "hubId": "hub_group-models"}, "position": {"x": 1367, "y": 435}, "classes": "type-model has-logo"}, {"data": {"id": "model-xlm-roberta-base", "label": "FacebookAI/xlm-roberta-base", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Multilingual fill-mask model by Meta/FacebookAI (20.8M downloads), MIT license, 100 languages", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "", "hubId": "hub_group-models"}, "position": {"x": 1679, "y": 385}, "classes": "type-model"}, {"data": {"id": "model-electra-base", "label": "google/electra-base-discriminator", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Pretraining discriminator model by Google (50.7M downloads), Apache-2.0, ELECTRA architecture", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPkdvb2dsZTwvdGl0bGU+PHBhdGggZD0iTTEyLjQ4IDEwLjkydjMuMjhoNy44NGMtLjI0IDEuODQtLjg1MyAzLjE4Ny0xLjc4NyA0LjEzMy0xLjE0NyAxLjE0Ny0yLjkzMyAyLjQtNi4wNTMgMi40LTQuODI3IDAtOC42LTMuODkzLTguNi04LjcyczMuNzczLTguNzIgOC42LTguNzJjMi42IDAgNC41MDcgMS4wMjcgNS45MDcgMi4zNDdsMi4zMDctMi4zMDdDMTguNzQ3IDEuNDQgMTYuMTMzIDAgMTIuNDggMCA1Ljg2NyAwIC4zMDcgNS4zODcuMzA3IDEyczUuNTYgMTIgMTIuMTczIDEyYzMuNTczIDAgNi4yNjctMS4xNzMgOC4zNzMtMy4zNiAyLjE2LTIuMTYgMi44NC01LjIxMyAyLjg0LTcuNjY3IDAtLjc2LS4wNTMtMS40NjctLjE3My0yLjA1M0gxMi40OHoiLz48L3N2Zz4=", "hubId": "hub_group-models"}, "position": {"x": 1679, "y": 615}, "classes": "type-model has-logo"}, {"data": {"id": "model-nsfw-detection", "label": "Falconsai/nsfw_image_detection", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "NSFW image classification model (41M downloads), Apache-2.0, ViT-based content moderation", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "", "hubId": "hub_group-models"}, "position": {"x": 1480, "y": 730}, "classes": "type-model"}, {"data": {"id": "model-clap-htsat", "label": "laion/clap-htsat-fused", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Audio classification model by LAION (26M downloads), Apache-2.0, zero-shot audio retrieval", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "", "hubId": "hub_group-models"}, "position": {"x": 1281, "y": 615}, "classes": "type-model"}, {"data": {"id": "pattern-gpt4", "label": "GPT-4 / GPT-4o (detection pattern)", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Regex detection pattern for GPT-4 and GPT-4o model variants in scanned codebases", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "", "hubId": "hub_group-models"}, "position": {"x": 1281, "y": 385}, "classes": "type-model"}, {"data": {"id": "pattern-gpt35", "label": "GPT-3.5 Turbo (detection pattern)", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Regex detection pattern for GPT-3.5 Turbo model variants in scanned codebases", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "", "hubId": "hub_group-models"}, "position": {"x": 1480, "y": 270}, "classes": "type-model"}, {"data": {"id": "pattern-claude", "label": "Claude models (detection pattern)", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Regex detection pattern for Claude model family in scanned codebases", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "", "hubId": "hub_group-models"}, "position": {"x": 1810, "y": 500}, "classes": "type-model"}, {"data": {"id": "pattern-gemini", "label": "Gemini models (detection pattern)", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Regex detection pattern for Google Gemini model variants in scanned codebases", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "", "hubId": "hub_group-models"}, "position": {"x": 1582, "y": 814}, "classes": "type-model"}, {"data": {"id": "pattern-mistral", "label": "Mistral models (detection pattern)", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Regex detection pattern for Mistral model variants in scanned codebases", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPk1pc3RyYWwgQUk8L3RpdGxlPjxwYXRoIGQ9Ik0xNy4xNDMgMy40Mjl2My40MjhoLTMuNDI5djMuNDI5aC0zLjQyOFY2Ljg1N0g2Ljg1N1YzLjQzSDMuNDN2MTMuNzE0SDB2My40MjhoMTAuMjg2di0zLjQyOEg2Ljg1N3YtMy40MjloMy40Mjl2My40MjloMy40Mjl2LTMuNDI5aDMuNDI4djMuNDI5aC0zLjQyOHYzLjQyOEgyNHYtMy40MjhoLTMuNDNWMy40Mjl6Ii8+PC9zdmc+", "hubId": "hub_group-models"}, "position": {"x": 1213, "y": 694}, "classes": "type-model has-logo"}, {"data": {"id": "pattern-llama", "label": "LLaMA models (detection pattern)", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Regex detection pattern for Meta LLaMA and Mixtral model variants in scanned codebases", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "", "hubId": "hub_group-models"}, "position": {"x": 1213, "y": 306}, "classes": "type-model"}, {"data": {"id": "pattern-deepseek", "label": "DeepSeek models (detection pattern)", "parent_group": "group-models", "nodeType": "model", "version": "unknown", "tooltip": "Regex detection pattern for DeepSeek model variants in scanned codebases", "issues": [], "issuesText": "", "hasIssues": false, "color": "#56d364", "borderColor": "#56d364", "bgColor": "#0a2010", "iconDataUri": "", "hubId": "hub_group-models"}, "position": {"x": 1582, "y": 186}, "classes": "type-model"}, {"data": {"id": "reg-pinecone", "label": "Pinecone (cataloged)", "parent_group": "group-embeddings", "nodeType": "vector-db", "version": "unknown", "tooltip": "Cataloged vector database client, Apache-2.0", "issues": [], "issuesText": "", "hasIssues": false, "color": "#39c5cf", "borderColor": "#39c5cf", "bgColor": "#0d2830", "iconDataUri": "", "hubId": "hub_group-embeddings"}, "position": {"x": 440, "y": 850}, "classes": "type-vector-db"}, {"data": {"id": "reg-weaviate", "label": "Weaviate (cataloged)", "parent_group": "group-embeddings", "nodeType": "vector-db", "version": "unknown", "tooltip": "Cataloged vector database client, BSD-3-Clause", "issues": [], "issuesText": "", "hasIssues": false, "color": "#39c5cf", "borderColor": "#39c5cf", "bgColor": "#0d2830", "iconDataUri": "", "hubId": "hub_group-embeddings"}, "position": {"x": 553, "y": 915}, "classes": "type-vector-db"}, {"data": {"id": "reg-chromadb", "label": "ChromaDB (cataloged)", "parent_group": "group-embeddings", "nodeType": "vector-db", "version": "unknown", "tooltip": "Cataloged vector database, Apache-2.0, open-source embedding database", "issues": [], "issuesText": "", "hasIssues": false, "color": "#39c5cf", "borderColor": "#39c5cf", "bgColor": "#0d2830", "iconDataUri": "", "hubId": "hub_group-embeddings"}, "position": {"x": 553, "y": 1045}, "classes": "type-vector-db"}, {"data": {"id": "reg-faiss", "label": "FAISS (cataloged)", "parent_group": "group-embeddings", "nodeType": "vector-db", "version": "unknown", "tooltip": "Cataloged vector search library by Meta, MIT license, CPU and GPU variants", "issues": [], "issuesText": "", "hasIssues": false, "color": "#39c5cf", "borderColor": "#39c5cf", "bgColor": "#0d2830", "iconDataUri": "", "hubId": "hub_group-embeddings"}, "position": {"x": 440, "y": 1110}, "classes": "type-vector-db"}, {"data": {"id": "reg-qdrant", "label": "Qdrant (cataloged)", "parent_group": "group-embeddings", "nodeType": "vector-db", "version": "unknown", "tooltip": "Cataloged vector database client, Apache-2.0", "issues": [], "issuesText": "", "hasIssues": false, "color": "#39c5cf", "borderColor": "#39c5cf", "bgColor": "#0d2830", "iconDataUri": "", "hubId": "hub_group-embeddings"}, "position": {"x": 327, "y": 1045}, "classes": "type-vector-db"}, {"data": {"id": "reg-pymilvus", "label": "Milvus (cataloged)", "parent_group": "group-embeddings", "nodeType": "vector-db", "version": "unknown", "tooltip": "Cataloged vector database client by Zilliz, Apache-2.0", "issues": [], "issuesText": "", "hasIssues": false, "color": "#39c5cf", "borderColor": "#39c5cf", "bgColor": "#0d2830", "iconDataUri": "", "hubId": "hub_group-embeddings"}, "position": {"x": 327, "y": 915}, "classes": "type-vector-db"}, {"data": {"id": "reg-redisvl", "label": "Redis Vector Library (cataloged)", "parent_group": "group-embeddings", "nodeType": "vector-db", "version": "unknown", "tooltip": "Cataloged Redis vector search library, MIT license", "issues": [], "issuesText": "", "hasIssues": false, "color": "#39c5cf", "borderColor": "#39c5cf", "bgColor": "#0d2830", "iconDataUri": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJ3aGl0ZSIgcm9sZT0iaW1nIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPlJlZGlzPC90aXRsZT48cGF0aCBkPSJNMjIuNzEgMTMuMTQ1Yy0xLjY2IDIuMDkyLTMuNDUyIDQuNDgzLTcuMDM4IDQuNDgzLTMuMjAzIDAtNC4zOTctMi44MjUtNC40OC01LjEyLjcwMSAxLjQ4NCAyLjA3MyAyLjY4NSA0LjIxNCAyLjYzIDQuMTE3LS4xMzMgNi45NC0zLjg1MiA2Ljk0LTcuMjM5IDAtNC4wNS0zLjAyMi02Ljk3Mi04LjI2OC02Ljk3Mi0zLjc1MiAwLTguNCAxLjQyOC0xMS40NTUgMy42ODVDMi41OSA2LjkzNyAzLjg4NSA5Ljk1OCA0LjM1IDkuNjI2YzIuNjQ4LTEuOTA0IDQuNzQ4LTMuMTMgNi43ODQtMy43NDRDOC4xMiA5LjI0NC44ODYgMTcuMDUgMCAxOC40MjVjLjEgMS4yNjEgMS42NiA0LjY0OCAyLjQyNCA0LjY0OC4yMzIgMCAuNDMxLS4xMzMuNjY0LS4zNjVhMTAwLjQ5IDEwMC40OSAwIDAgMCA1LjU0LTYuNzY1Yy4yMjIgMy4xMDQgMS43NDggNi44OTggNi4wMTQgNi44OTggMy44MTkgMCA3LjYwNC0yLjc1NiA5LjMzLTguOTY1LjItLjc2NC0uNzMtMS4zNjEtMS4yNjEtLjczem0tNC4zNDktNS4wMTNjMCAxLjk1OS0xLjkyNiAyLjkyMi0zLjY4NSAyLjkyMi0uOTQxIDAtMS42NjQtLjI0Ny0yLjIzNS0uNTY4IDEuMDUxLTEuNTkyIDIuMDkyLTMuMjI1IDMuMjEtNC45NzMgMS45NzIuMzM0IDIuNzEgMS40MyAyLjcxIDIuNjE5eiIvPjwvc3ZnPg==", "hubId": "hub_group-embeddings"}, "position": {"x": 639, "y": 865}, "classes": "type-vector-db has-logo"}, {"data": {"id": "cyclonedx-bom", "label": "CycloneDX 1.7 AI-BOM Output", "parent_group": "group-issues", "nodeType": "security", "version": "1.7", "tooltip": "Generated CycloneDX 1.7 compliant AI Bill of Materials with OWASP AI BOM extensions", "issues": [], "issuesText": "", "hasIssues": false, "color": "#f85149", "borderColor": "#f85149", "bgColor": "#2d0f0f", "iconDataUri": "", "hubId": "hub_group-issues"}, "position": {"x": 960, "y": 850}, "classes": "type-security"}, {"data": {"id": "issue-api-key-secret", "label": "API Key in Secrets", "parent_group": "group-issues", "nodeType": "issue", "version": "unknown", "tooltip": "ANTHROPIC_API_KEY is passed via GitHub Actions secrets \u2014 ensure proper rotation and access controls", "issues": ["ANTHROPIC_API_KEY stored as GitHub secret"], "issuesText": "ANTHROPIC_API_KEY stored as GitHub secret", "hasIssues": true, "color": "#f85149", "borderColor": "#f85149", "bgColor": "#3d1515", "iconDataUri": "", "hubId": "hub_group-issues"}, "position": {"x": 1073, "y": 915}, "classes": "issue-node type-issue"}, {"data": {"id": "spoke_client", "source": "hub_group-client", "target": "client"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_github-actions", "source": "hub_group-infra", "target": "github-actions"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-langsmith", "source": "hub_group-infra", "target": "reg-langsmith"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_html-report", "source": "hub_group-infra", "target": "html-report"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_topology-viz", "source": "hub_group-infra", "target": "topology-viz"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_download-script", "source": "hub_group-infra", "target": "download-script"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_scan-py", "source": "hub_group-agents", "target": "scan-py"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-langchain", "source": "hub_group-agents", "target": "reg-langchain"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-llamaindex", "source": "hub_group-agents", "target": "reg-llamaindex"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-haystack", "source": "hub_group-agents", "target": "reg-haystack"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-mcp", "source": "hub_group-agents", "target": "reg-mcp"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-a2a", "source": "hub_group-agents", "target": "reg-a2a"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-semantic-router", "source": "hub_group-agents", "target": "reg-semantic-router"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_anthropic-sdk", "source": "hub_group-llm", "target": "anthropic-sdk"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-openai", "source": "hub_group-llm", "target": "reg-openai"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-google-genai", "source": "hub_group-llm", "target": "reg-google-genai"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-cohere", "source": "hub_group-llm", "target": "reg-cohere"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-mistralai", "source": "hub_group-llm", "target": "reg-mistralai"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-groq", "source": "hub_group-llm", "target": "reg-groq"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-together", "source": "hub_group-llm", "target": "reg-together"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-replicate", "source": "hub_group-llm", "target": "reg-replicate"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-litellm", "source": "hub_group-llm", "target": "reg-litellm"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_claude-api", "source": "hub_group-gateway", "target": "claude-api"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_huggingface-hub-api", "source": "hub_group-gateway", "target": "huggingface-hub-api"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_aibom-py", "source": "hub_group-frameworks", "target": "aibom-py"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_topology-py", "source": "hub_group-frameworks", "target": "topology-py"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_requests-lib", "source": "hub_group-frameworks", "target": "requests-lib"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-torch", "source": "hub_group-frameworks", "target": "reg-torch"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-tensorflow", "source": "hub_group-frameworks", "target": "reg-tensorflow"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-transformers", "source": "hub_group-frameworks", "target": "reg-transformers"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-keras", "source": "hub_group-frameworks", "target": "reg-keras"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-jax", "source": "hub_group-frameworks", "target": "reg-jax"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-sklearn", "source": "hub_group-frameworks", "target": "reg-sklearn"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-spacy", "source": "hub_group-frameworks", "target": "reg-spacy"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-diffusers", "source": "hub_group-frameworks", "target": "reg-diffusers"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_model-registry", "source": "hub_group-data", "target": "model-registry"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_model-all-minilm-l6-v2", "source": "hub_group-models", "target": "model-all-minilm-l6-v2"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_model-bert-base-uncased", "source": "hub_group-models", "target": "model-bert-base-uncased"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_model-all-mpnet-base-v2", "source": "hub_group-models", "target": "model-all-mpnet-base-v2"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_model-paraphrase-multilingual", "source": "hub_group-models", "target": "model-paraphrase-multilingual"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_model-clip-vit-large", "source": "hub_group-models", "target": "model-clip-vit-large"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_model-clip-vit-base", "source": "hub_group-models", "target": "model-clip-vit-base"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_model-xlm-roberta-base", "source": "hub_group-models", "target": "model-xlm-roberta-base"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_model-electra-base", "source": "hub_group-models", "target": "model-electra-base"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_model-nsfw-detection", "source": "hub_group-models", "target": "model-nsfw-detection"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_model-clap-htsat", "source": "hub_group-models", "target": "model-clap-htsat"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_pattern-gpt4", "source": "hub_group-models", "target": "pattern-gpt4"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_pattern-gpt35", "source": "hub_group-models", "target": "pattern-gpt35"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_pattern-claude", "source": "hub_group-models", "target": "pattern-claude"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_pattern-gemini", "source": "hub_group-models", "target": "pattern-gemini"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_pattern-mistral", "source": "hub_group-models", "target": "pattern-mistral"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_pattern-llama", "source": "hub_group-models", "target": "pattern-llama"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_pattern-deepseek", "source": "hub_group-models", "target": "pattern-deepseek"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-pinecone", "source": "hub_group-embeddings", "target": "reg-pinecone"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-weaviate", "source": "hub_group-embeddings", "target": "reg-weaviate"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-chromadb", "source": "hub_group-embeddings", "target": "reg-chromadb"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-faiss", "source": "hub_group-embeddings", "target": "reg-faiss"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-qdrant", "source": "hub_group-embeddings", "target": "reg-qdrant"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-pymilvus", "source": "hub_group-embeddings", "target": "reg-pymilvus"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_reg-redisvl", "source": "hub_group-embeddings", "target": "reg-redisvl"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_cyclonedx-bom", "source": "hub_group-issues", "target": "cyclonedx-bom"}, "classes": "spoke-edge"}, {"data": {"id": "spoke_issue-api-key-secret", "source": "hub_group-issues", "target": "issue-api-key-secret"}, "classes": "spoke-edge"}, {"data": {"id": "e0", "source": "client", "target": "github-actions", "label": "triggers scan (push/PR/manual)", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e1", "source": "github-actions", "target": "scan-py", "label": "executes scanner", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e2", "source": "scan-py", "target": "anthropic-sdk", "label": "imports and calls", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e3", "source": "anthropic-sdk", "target": "claude-api", "label": "sends code for analysis", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e4", "source": "claude-api", "target": "anthropic-sdk", "label": "returns structured analysis", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e5", "source": "scan-py", "target": "aibom-py", "label": "invokes BOM generation", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e6", "source": "scan-py", "target": "topology-py", "label": "invokes topology generation", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e7", "source": "aibom-py", "target": "requests-lib", "label": "HTTP calls for metadata", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e8", "source": "aibom-py", "target": "cyclonedx-bom", "label": "generates AI-BOM JSON", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e9", "source": "scan-py", "target": "html-report", "label": "generates HTML report", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e10", "source": "topology-py", "target": "topology-viz", "label": "generates interactive topology HTML", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e11", "source": "github-actions", "target": "html-report", "label": "uploads as artifact", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e12", "source": "github-actions", "target": "cyclonedx-bom", "label": "uploads as artifact", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e13", "source": "github-actions", "target": "topology-viz", "label": "uploads as artifact", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e14", "source": "download-script", "target": "huggingface-hub-api", "label": "fetches model metadata", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e15", "source": "huggingface-hub-api", "target": "model-registry", "label": "stores metadata JSON", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e16", "source": "model-registry", "target": "model-all-minilm-l6-v2", "label": "contains metadata", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e17", "source": "model-registry", "target": "model-bert-base-uncased", "label": "contains metadata", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e18", "source": "model-registry", "target": "model-all-mpnet-base-v2", "label": "contains metadata", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e19", "source": "model-registry", "target": "model-paraphrase-multilingual", "label": "contains metadata", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e20", "source": "model-registry", "target": "model-clip-vit-large", "label": "contains metadata", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e21", "source": "model-registry", "target": "model-clip-vit-base", "label": "contains metadata", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e22", "source": "model-registry", "target": "model-xlm-roberta-base", "label": "contains metadata", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e23", "source": "model-registry", "target": "model-electra-base", "label": "contains metadata", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e24", "source": "model-registry", "target": "model-nsfw-detection", "label": "contains metadata", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e25", "source": "model-registry", "target": "model-clap-htsat", "label": "contains metadata", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e26", "source": "aibom-py", "target": "reg-openai", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e27", "source": "aibom-py", "target": "reg-google-genai", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e28", "source": "aibom-py", "target": "reg-cohere", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e29", "source": "aibom-py", "target": "reg-mistralai", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e30", "source": "aibom-py", "target": "reg-groq", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e31", "source": "aibom-py", "target": "reg-together", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e32", "source": "aibom-py", "target": "reg-replicate", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e33", "source": "aibom-py", "target": "reg-litellm", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e34", "source": "aibom-py", "target": "reg-langchain", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e35", "source": "aibom-py", "target": "reg-llamaindex", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e36", "source": "aibom-py", "target": "reg-haystack", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e37", "source": "aibom-py", "target": "reg-langsmith", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e38", "source": "aibom-py", "target": "reg-mcp", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e39", "source": "aibom-py", "target": "reg-a2a", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e40", "source": "aibom-py", "target": "reg-semantic-router", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e41", "source": "aibom-py", "target": "reg-torch", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e42", "source": "aibom-py", "target": "reg-tensorflow", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e43", "source": "aibom-py", "target": "reg-transformers", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e44", "source": "aibom-py", "target": "reg-keras", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e45", "source": "aibom-py", "target": "reg-jax", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e46", "source": "aibom-py", "target": "reg-sklearn", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e47", "source": "aibom-py", "target": "reg-spacy", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e48", "source": "aibom-py", "target": "reg-diffusers", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e49", "source": "aibom-py", "target": "reg-pinecone", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e50", "source": "aibom-py", "target": "reg-weaviate", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e51", "source": "aibom-py", "target": "reg-chromadb", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e52", "source": "aibom-py", "target": "reg-faiss", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e53", "source": "aibom-py", "target": "reg-qdrant", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e54", "source": "aibom-py", "target": "reg-pymilvus", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e55", "source": "aibom-py", "target": "reg-redisvl", "label": "catalogs for detection", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e56", "source": "scan-py", "target": "pattern-gpt4", "label": "detects via regex", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e57", "source": "scan-py", "target": "pattern-gpt35", "label": "detects via regex", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e58", "source": "scan-py", "target": "pattern-claude", "label": "detects via regex", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e59", "source": "scan-py", "target": "pattern-gemini", "label": "detects via regex", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e60", "source": "scan-py", "target": "pattern-mistral", "label": "detects via regex", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e61", "source": "scan-py", "target": "pattern-llama", "label": "detects via regex", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e62", "source": "scan-py", "target": "pattern-deepseek", "label": "detects via regex", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e63", "source": "github-actions", "target": "issue-api-key-secret", "label": "uses ANTHROPIC_API_KEY secret", "direction": "forward"}, "classes": "flow-edge edge-forward"}, {"data": {"id": "e64", "source": "issue-api-key-secret", "target": "anthropic-sdk", "label": "provides authentication", "direction": "forward"}, "classes": "flow-edge edge-forward"}];
+const clusterMeta = {"group-client": {"label": "Clients", "color": "#8b949e", "bg": "#1c2128", "hub_color": "#3a4450"}, "group-gateway": {"label": "Gateway / Proxy", "color": "#58a6ff", "bg": "#0d1f3c", "hub_color": "#1a4a7a"}, "group-frameworks": {"label": "AI Frameworks & Libs", "color": "#79c0ff", "bg": "#0a1929", "hub_color": "#1a3a5c"}, "group-llm": {"label": "LLM Integrations", "color": "#3fb950", "bg": "#0d2818", "hub_color": "#1a5c30"}, "group-models": {"label": "Confirmed Models", "color": "#56d364", "bg": "#0a2010", "hub_color": "#1a5c30"}, "group-embeddings": {"label": "Embeddings & Vector", "color": "#39c5cf", "bg": "#0d2830", "hub_color": "#1a4a5c"}, "group-agents": {"label": "Agents & Orchestration", "color": "#bc8cff", "bg": "#1e1240", "hub_color": "#3d2080"}, "group-prompt": {"label": "Prompt Engineering", "color": "#f0883e", "bg": "#2d1a08", "hub_color": "#6b3a10"}, "group-data": {"label": "Data & Storage", "color": "#58a6ff", "bg": "#0d1a30", "hub_color": "#1a3a6b"}, "group-infra": {"label": "AI Infrastructure", "color": "#d29922", "bg": "#2d2007", "hub_color": "#6b4e0a"}, "group-issues": {"label": "CVEs & Security Issues", "color": "#f85149", "bg": "#2d0f0f", "hub_color": "#7a1a1a"}};
+
+// ── Init Cytoscape ──
+const cy = cytoscape({
+  container: document.getElementById('cy'),
+  elements: elements,
+  style: [
+    // Hub nodes (category hexagons)
+    {
+      selector: 'node.hub-node',
+      style: {
+        'shape': 'polygon',
+        'shape-polygon-points': '-0.5 -0.866 0.5 -0.866 1 0 0.5 0.866 -0.5 0.866 -1 0',
+        'background-color': function(ele) { return ele.data('hubColor'); },
+        'border-color': function(ele) { return ele.data('hubBorder'); },
+        'border-width': 2.5,
+        'label': 'data(label)',
+        'color': function(ele) { return ele.data('textColor'); },
+        'font-size': 12,
+        'font-weight': 800,
+        'text-valign': 'center',
+        'text-halign': 'center',
+        'text-wrap': 'wrap',
+        'text-max-width': 100,
+        'width': 120,
+        'height': 120,
+        'z-index': 10,
+      }
+    },
+    // Vendor / component nodes
+    {
+      selector: 'node:not(.hub-node)',
+      style: {
+        'shape': 'polygon',
+        'shape-polygon-points': '-0.5 -0.866 0.5 -0.866 1 0 0.5 0.866 -0.5 0.866 -1 0',
+        'background-color': function(ele) { return ele.data('bgColor'); },
+        'border-color': function(ele) { return ele.data('borderColor'); },
+        'border-width': 1.5,
+        'label': 'data(label)',
+        'color': '#e2e8f0',
+        'font-size': 9,
+        'font-weight': 600,
+        'text-valign': 'bottom',
+        'text-halign': 'center',
+        'text-margin-y': 8,
+        'text-wrap': 'ellipsis',
+        'text-max-width': 90,
+        'width': 80,
+        'height': 80,
+        'min-zoomed-font-size': 7,
+        'z-index': 5,
+      }
+    },
+    // Issue nodes — red glow
+    {
+      selector: 'node.issue-node',
+      style: {
+        'border-width': 2.5,
+        'border-color': '#f87171',
+        'background-color': '#3d1515',
+        'shadow-blur': 14,
+        'shadow-color': '#f87171',
+        'shadow-opacity': 0.7,
+        'shadow-offset-x': 0,
+        'shadow-offset-y': 0,
+      }
+    },
+    // Hover
+    {
+      selector: 'node:not(.hub-node):hover',
+      style: {
+        'border-width': 2.5,
+        'border-color': '#60a5fa',
+        'z-index': 999,
+      }
+    },
+    // Selected
+    {
+      selector: 'node:selected',
+      style: {
+        'border-width': 3,
+        'border-color': '#ffffff',
+        'z-index': 1000,
+      }
+    },
+    // Spoke edges (hub → child)
+    {
+      selector: 'edge.spoke-edge',
+      style: {
+        'width': 1.5,
+        'line-color': '#2dd4bf',
+        'line-style': 'solid',
+        'target-arrow-shape': 'none',
+        'opacity': 0.7,
+        'curve-style': 'unbundled-bezier',
+        'control-point-distances': [0],
+        'control-point-weights': [0.5],
+      }
+    },
+    // Flow edges (data flow, prominent)
+    {
+      selector: 'edge.flow-edge',
+      style: {
+        'width': 1.5,
+        'line-color': '#3b5270',
+        'target-arrow-color': '#60a5fa',
+        'target-arrow-shape': 'triangle',
+        'source-arrow-color': '#60a5fa',
+        'curve-style': 'bezier',
+        'label': 'data(label)',
+        'font-size': 8,
+        'color': '#64748b',
+        'text-rotation': 'autorotate',
+        'text-margin-y': -6,
+        'opacity': 0.85,
+        'min-zoomed-font-size': 8,
+        'z-index': 8,
+      }
+    },
+    {
+      selector: 'edge.edge-both',
+      style: {
+        'source-arrow-shape': 'triangle',
+        'target-arrow-shape': 'triangle',
+      }
+    },
+    {
+      selector: 'edge.flow-edge:selected',
+      style: {
+        'width': 3,
+        'line-color': '#60a5fa',
+        'opacity': 1,
+        'z-index': 999,
+      }
+    },
+    // Dimmed (search / focus)
+    {
+      selector: '.dimmed',
+      style: { 'opacity': 0.06 }
+    },
+    {
+      selector: '.highlighted',
+      style: { 'opacity': 1, 'z-index': 999 }
+    },
+  ],
+  layout: {
+    name: 'preset',
+    fit: true,
+    padding: 60,
+  },
+  minZoom: 0.08,
+  maxZoom: 5,
+  wheelSensitivity: 0.25,
+});
+
+// ── Vendor logo overlay using SVG images ──
+function renderLogos() {
+  cy.nodes(':not(.hub-node)').forEach(node => {
+    const uri = node.data('iconDataUri');
+    if (!uri) return;
+    node.style({
+      'background-image': uri,
+      'background-fit': 'contain',
+      'background-clip': 'node',
+      'background-image-opacity': 0.9,
+      'background-width': 28,
+      'background-height': 28,
+      'background-position-x': '50%',
+      'background-position-y': '38%',
+    });
+  });
+}
+
+// ── Tooltip ──
+const tooltip = document.getElementById('tooltip');
+let tooltipNode = null;
+
+cy.on('mouseover', 'node:not(.hub-node)', function(e) {
+  const d = e.target.data();
+  tooltipNode = e.target;
+  const issueHtml = (d.issues || []).length
+    ? (d.issues || []).map(i => `<div class="tt-issue">⚠️ ${i}</div>`).join('')
+    : '';
+  tooltip.innerHTML = `
+    <div class="tt-name">${d.label}</div>
+    ${d.version && d.version !== 'unknown' ? `<div class="tt-ver">v${d.version}</div>` : ''}
+    ${d.tooltip ? `<div class="tt-desc">${d.tooltip}</div>` : ''}
+    ${issueHtml}
+    <div class="tt-hint">Click for details · Double-click to focus</div>
+  `;
+  tooltip.style.display = 'block';
+});
+
+cy.on('mouseover', 'node.hub-node', function(e) {
+  const d = e.target.data();
+  const meta = clusterMeta[d.group] || {};
+  const children = cy.nodes(`[parent_group="${d.group}"]`);
+  tooltip.innerHTML = `
+    <div class="tt-name">${d.label}</div>
+    <div class="tt-desc">${children.length} component${children.length !== 1 ? 's' : ''}</div>
+    <div class="tt-hint">Double-click to zoom into this category</div>
+  `;
+  tooltip.style.display = 'block';
+});
+
+cy.on('mouseout', 'node', () => { tooltip.style.display = 'none'; tooltipNode = null; });
+cy.on('mousemove', e => {
+  if (tooltip.style.display !== 'none') {
+    tooltip.style.left = (e.originalEvent.clientX + 16) + 'px';
+    tooltip.style.top  = (e.originalEvent.clientY - 12) + 'px';
+  }
+});
+
+// ── Single click → sidebar detail ──
+cy.on('tap', 'node:not(.hub-node)', function(e) {
+  const d = e.target.data();
+  const panel = document.getElementById('node-detail');
+  const content = document.getElementById('nd-content');
+  panel.style.display = 'block';
+
+  const meta = clusterMeta[d.parent_group] || {color: '#60a5fa', label: ''};
+  const badge = `<div class="nd-badge" style="background:${meta.color}18;border:1px solid ${meta.color}40;color:${meta.color}">${meta.label}</div>`;
+
+  let logoHtml = '';
+  if (d.iconDataUri) {
+    logoHtml = `<div class="nd-logo" style="background:${d.bgColor};border:1px solid ${d.borderColor}40"><img src="${d.iconDataUri}" alt="${d.label}"></div>`;
+  }
+
+  const issuesHtml = (d.issues || []).map(i => `<div class="nd-issue">${i}</div>`).join('');
+
+  // Count connections
+  const connEdges = e.target.connectedEdges('.flow-edge');
+  const connCount = connEdges.length;
+
+  content.innerHTML = `
+    ${badge}
+    ${logoHtml}
+    <div class="nd-name">${d.label}</div>
+    ${d.version && d.version !== 'unknown' ? `<div class="nd-version">v${d.version}</div>` : ''}
+    ${d.tooltip ? `<div class="nd-desc">${d.tooltip}</div>` : ''}
+    ${issuesHtml}
+    ${connCount > 0 ? `<div class="nd-connections">Connected to <strong>${connCount}</strong> other component${connCount !== 1 ? 's' : ''}</div>` : ''}
+  `;
+});
+
+// ── Double-click: FOCUS MODE ──
+let focusActive = false;
+
+cy.on('dblclick', 'node:not(.hub-node)', function(e) {
+  const node = e.target;
+  const d = node.data();
+  setFocus(node, d.label);
+});
+
+cy.on('dblclick', 'node.hub-node', function(e) {
+  const hubNode = e.target;
+  const hubId = hubNode.data('group');
+  focusCluster(hubId, hubNode.data('label'));
+});
+
+function focusCluster(hubId, label) {
+  focusActive = true;
+  document.getElementById('focus-bar').classList.add('active');
+  document.getElementById('focus-crumb').textContent = label;
+
+  const hubNode = cy.nodes('[id = "hub_' + hubId + '"]');
+  const children = cy.nodes(`[parent_group="${hubId}"]`);
+  const spokes = children.connectedEdges('.spoke-edge');
+  // Also include any flow edges between cluster members and external nodes
+  const flowEdges = children.connectedEdges('.flow-edge');
+  const externalNeighbors = flowEdges.connectedNodes().difference(children).difference(hubNode);
+
+  const focal = hubNode.union(children).union(spokes).union(flowEdges).union(externalNeighbors);
+
+  cy.elements().addClass('dimmed');
+  focal.removeClass('dimmed').addClass('highlighted');
+
+  // Make spokes brighter on focus
+  spokes.style({
+    'line-color': '#5a90c0',
+    'width': 1.8,
+    'opacity': 1,
+  });
+
+  cy.animate({
+    fit: { eles: hubNode.union(children), padding: 80 },
+    duration: 500,
+    easing: 'ease-in-out-cubic',
+  });
+}
+
+cy.on('dblclick', function(e) {
+  if (e.target === cy) {
+    exitFocus();
+  }
+});
+
+function setFocus(node, label) {
+  focusActive = true;
+  document.getElementById('focus-bar').classList.add('active');
+  document.getElementById('focus-crumb').textContent = label;
+
+  // Highlight node + its cluster (hub + siblings + spokes) + flow connections
+  const groupId = node.data('parent_group');
+  const hubNode = cy.nodes('[id = "hub_' + groupId + '"]');
+  const siblings = cy.nodes(`[parent_group="${groupId}"]`);
+  const spokes = siblings.connectedEdges('.spoke-edge');
+  const flowEdges = node.connectedEdges('.flow-edge');
+  const flowNeighbors = flowEdges.connectedNodes();
+
+  const focal = node.union(hubNode).union(siblings).union(spokes).union(flowEdges).union(flowNeighbors);
+
+  cy.elements().addClass('dimmed');
+  focal.removeClass('dimmed').addClass('highlighted');
+
+  // Highlight the focal node itself more strongly
+  node.style({ 'border-width': 3, 'border-color': '#ffffff' });
+
+  // Make spokes brighter
+  spokes.style({
+    'line-color': '#5a90c0',
+    'width': 1.8,
+    'opacity': 1,
+  });
+
+  // Zoom to fit the focal node + its flow neighbors (not all siblings)
+  const zoomTo = node.union(flowEdges).union(flowNeighbors).union(hubNode);
+  cy.animate({
+    fit: { eles: zoomTo.length > 1 ? zoomTo : focal, padding: 100 },
+    duration: 500,
+    easing: 'ease-in-out-cubic',
+  });
+}
+
+function exitFocus() {
+  focusActive = false;
+  document.getElementById('focus-bar').classList.remove('active');
+  cy.elements().removeClass('dimmed highlighted');
+  // Reset any inline styles applied during focus
+  cy.nodes().removeStyle('border-width border-color');
+  cy.edges('.spoke-edge').removeStyle('line-color width opacity');
+  cy.animate({
+    fit: { padding: 60 },
+    duration: 400,
+    easing: 'ease-in-out-cubic',
+  });
+  clearSearch();
+}
+
+// Escape key exits focus
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') exitFocus();
+});
+
+// Click on canvas clears detail panel
+cy.on('tap', function(e) {
+  if (e.target === cy) {
+    document.getElementById('node-detail').style.display = 'none';
+  }
+});
+
+// ── Cluster controls ──
+const collapsedClusters = new Set();
+
+function buildClusterControls() {
+  const container = document.getElementById('cluster-controls');
+  container.innerHTML = '';
+  const hubs = cy.nodes('.hub-node');
+  hubs.forEach(hub => {
+    const group = hub.data('group');
+    const meta = clusterMeta[group] || {color: '#60a5fa', label: group};
+    const children = cy.nodes(`[parent_group="${group}"]`);
+    const count = children.length;
+    const isCollapsed = collapsedClusters.has(group);
+    const btn = document.createElement('button');
+    btn.className = 'cluster-btn' + (isCollapsed ? ' collapsed' : '');
+    btn.dataset.group = group;
+    btn.title = 'Double-click to focus on this category';
+    btn.innerHTML = `
+      <span class="cb-label">
+        <span class="cluster-dot" style="background:${meta.color}"></span>
+        ${meta.label}
+      </span>
+      <span style="display:flex;align-items:center;gap:5px">
+        <span class="cluster-count">${count}</span>
+        <span class="cluster-arrow">▼</span>
+      </span>
+    `;
+    btn.onclick = () => toggleCluster(group);
+    btn.ondblclick = (ev) => { ev.stopPropagation(); focusCluster(group); };
+    container.appendChild(btn);
+  });
+}
+
+function toggleCluster(group) {
+  const children = cy.nodes(`[parent_group="${group}"]`);
+  const spokes = children.connectedEdges('.spoke-edge');
+  if (collapsedClusters.has(group)) {
+    collapsedClusters.delete(group);
+    children.style('display', 'element');
+    spokes.style('display', 'element');
+  } else {
+    collapsedClusters.add(group);
+    children.style('display', 'none');
+    spokes.style('display', 'none');
+  }
+  buildClusterControls();
+  cy.fit(null, 60);
+}
+
+
+// ── Search ──
+function filterNodes(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) { clearSearch(); return; }
+  cy.elements().addClass('dimmed');
+  const matched = cy.nodes(':not(.hub-node)').filter(n =>
+    n.data('label').toLowerCase().includes(q) ||
+    (n.data('tooltip') || '').toLowerCase().includes(q) ||
+    (n.data('issuesText') || '').toLowerCase().includes(q)
+  );
+  matched.addClass('highlighted').removeClass('dimmed');
+  matched.connectedEdges().addClass('highlighted').removeClass('dimmed');
+  matched.map(n => cy.$('#' + n.data('hubId'))).forEach(h => h.addClass('highlighted').removeClass('dimmed'));
+}
+
+function clearSearch() {
+  cy.elements().removeClass('dimmed highlighted');
+  document.getElementById('search').value = '';
+}
+
+// ── Fit all ──
+function resetView() {
+  exitFocus();
+}
+
+// ── Export PNG ──
+function exportPng() {
+  const png = cy.png({scale: 2.5, bg: '#0a0e17', full: true});
+  const a = document.getElementById('export-link');
+  a.href = png;
+  a.download = 'ai-topology-llms.png';
+  a.click();
+}
+
+// ── Init ──
+cy.ready(() => {
+  renderLogos();
+  buildClusterControls();
+  cy.fit(null, 60);
+});
+
+// Re-render logos on zoom (they stay as CSS background-image, no rerender needed)
+</script>
+</body>
+</html>
