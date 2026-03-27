@@ -22,6 +22,12 @@ SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv", "env",
 SKIP_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".woff",
              ".woff2", ".ttf", ".eot", ".mp4", ".mp3", ".zip", ".tar",
              ".gz", ".pyc", ".min.js", ".min.css"}
+# Scanner's own files — skip when bundled inside the repo being scanned
+SKIP_OWN_FILES = {"scan.py", "topology.py", "aibom.py"}
+
+# Documentation-only extensions — contain AI keywords in prose, not code
+SKIP_DOC_EXTS = {".md", ".rst", ".txt", ".adoc", ".asciidoc"}
+
 # Scanner output files committed to repos — skip these to avoid ingesting
 # stale Grype/Trivy/Snyk/OWASP results as if they were live findings.
 SKIP_SCANNER_PATTERNS = re.compile(
@@ -113,7 +119,11 @@ def find_model_references(repo_dir, repo_url):
             continue
         if any(p in SKIP_DIRS for p in f.parts):
             continue
+        if f.name in SKIP_OWN_FILES:
+            continue
         if f.suffix.lower() in SKIP_EXTS:
+            continue
+        if f.suffix.lower() in SKIP_DOC_EXTS:
             continue
         if SKIP_SCANNER_PATTERNS.search(f.name):
             continue
@@ -250,6 +260,8 @@ def find_cves(repo_dir, repo_url):
             continue
         if any(p in f.parts for p in SKIP_DIRS):
             continue
+        if f.name in SKIP_OWN_FILES:
+            continue
         if f.suffix.lower() in SKIP_EXTS:
             continue
         if SKIP_SCANNER_PATTERNS.search(f.name):
@@ -322,6 +334,8 @@ def collect_repo_content(repo_dir):
             continue
         if any(p in SKIP_DIRS for p in f.parts):
             continue
+        if f.name in SKIP_OWN_FILES:
+            continue
         if SKIP_SCANNER_PATTERNS.search(f.name):
             continue
         if f.name in AI_INDICATOR_FILES:
@@ -341,7 +355,11 @@ def collect_repo_content(repo_dir):
             continue
         if any(p in SKIP_DIRS for p in f.parts):
             continue
+        if f.name in SKIP_OWN_FILES:
+            continue
         if f.suffix.lower() in SKIP_EXTS:
+            continue
+        if f.suffix.lower() in SKIP_DOC_EXTS:
             continue
         if SKIP_SCANNER_PATTERNS.search(f.name):
             continue
