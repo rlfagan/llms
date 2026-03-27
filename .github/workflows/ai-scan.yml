@@ -28,12 +28,6 @@ jobs:
       - name: Install dependencies
         run: pip install anthropic requests
 
-      - name: Download claudescan
-        run: |
-          curl -sSL https://raw.githubusercontent.com/rlfagan/aiscan/main/scan.py -o scan.py
-          curl -sSL https://raw.githubusercontent.com/rlfagan/aiscan/main/topology.py -o topology.py
-          curl -sSL https://raw.githubusercontent.com/rlfagan/aiscan/main/aibom.py -o aibom.py
-
       - name: Run AI component scan
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
