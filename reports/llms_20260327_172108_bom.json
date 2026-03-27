@@ -1,0 +1,849 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:daaaded5-0244-4539-b163-e1a1bbcb72d2",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-03-27T17:21:59Z",
+    "lifecycles": [
+      {
+        "phase": "runtime"
+      }
+    ],
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "supplier": {
+            "name": "claudescan"
+          },
+          "name": "claudescan",
+          "version": "1.0.0",
+          "purl": "pkg:github/rlfagan/aiscan@main"
+        }
+      ]
+    },
+    "authors": [
+      {
+        "name": "claudescan AI Scanner",
+        "email": "noreply@claudescan"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "bom-ref": "root-llms",
+      "supplier": {
+        "name": "rlfagan"
+      },
+      "name": "llms",
+      "version": "main",
+      "purl": "pkg:github/rlfagan/llms@main",
+      "description": "Scanned repository: https://github.com/rlfagan/llms"
+    },
+    "properties": [
+      {
+        "name": "ai:scan-date",
+        "value": "2026-03-27T17:21:59Z"
+      },
+      {
+        "name": "ai:repo-url",
+        "value": "https://github.com/rlfagan/llms"
+      },
+      {
+        "name": "ai:total-cves-in-code",
+        "value": "0"
+      },
+      {
+        "name": "ai:total-models-detected",
+        "value": "21"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-gpt-4",
+      "supplier": {
+        "name": "OpenAI"
+      },
+      "name": "gpt-4",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/openai/gpt-4",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L170"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-gpt-4o",
+      "supplier": {
+        "name": "OpenAI"
+      },
+      "name": "gpt-4o",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/openai/gpt-4o",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L170"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-gpt-3.5",
+      "supplier": {
+        "name": "OpenAI"
+      },
+      "name": "gpt-3.5",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/openai/gpt-3.5",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L171"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-llama",
+      "supplier": {
+        "name": "Meta"
+      },
+      "name": "llama",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/meta/llama",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L175"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-mixtral",
+      "supplier": {
+        "name": "Mistral AI"
+      },
+      "name": "mixtral",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/mistral-ai/mixtral",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L176"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-deepseek",
+      "supplier": {
+        "name": "DeepSeek"
+      },
+      "name": "deepseek",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/deepseek/deepseek",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L177"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-command-r",
+      "supplier": {
+        "name": "Cohere"
+      },
+      "name": "command-r",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/cohere/command-r",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L178"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-llama-index",
+      "supplier": {
+        "name": "Meta"
+      },
+      "name": "llama-index",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/meta/llama-index",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L214"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-llama_index",
+      "supplier": {
+        "name": "Meta"
+      },
+      "name": "llama_index",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/meta/llama_index",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L214"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-llamaindex",
+      "supplier": {
+        "name": "Meta"
+      },
+      "name": "llamaindex",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/meta/llamaindex",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L214"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-claude-opus-4-6",
+      "supplier": {
+        "name": "Anthropic"
+      },
+      "name": "claude-opus-4-6",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/anthropic/claude-opus-4-6",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L344"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-mistral-ai",
+      "supplier": {
+        "name": "Mistral AI"
+      },
+      "name": "mistral-ai",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/mistral-ai/mistral-ai",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L464"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-o1",
+      "supplier": {
+        "name": "Unknown"
+      },
+      "name": "o1",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/unknown/o1",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L499"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-o3",
+      "supplier": {
+        "name": "Unknown"
+      },
+      "name": "o3",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/unknown/o3",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L509"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-sonar",
+      "supplier": {
+        "name": "Unknown"
+      },
+      "name": "sonar",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/unknown/sonar",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L539"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-gpt-3.5-turbo",
+      "supplier": {
+        "name": "OpenAI"
+      },
+      "name": "gpt-3.5-turbo",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/openai/gpt-3.5-turbo",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229_topology.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_topology.html#L348"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-claude-3-opus",
+      "supplier": {
+        "name": "Anthropic"
+      },
+      "name": "claude-3-opus",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/anthropic/claude-3-opus",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229_topology.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_topology.html#L348"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-claude-3-haiku",
+      "supplier": {
+        "name": "Anthropic"
+      },
+      "name": "claude-3-haiku",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/anthropic/claude-3-haiku",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229_topology.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_topology.html#L348"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-llama_pattern",
+      "supplier": {
+        "name": "Meta"
+      },
+      "name": "llama_pattern",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/meta/llama_pattern",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229_topology.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_topology.html#L348"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-deepseek_pattern",
+      "supplier": {
+        "name": "DeepSeek"
+      },
+      "name": "deepseek_pattern",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/deepseek/deepseek_pattern",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171229_topology.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_topology.html#L348"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model-claude-powered",
+      "supplier": {
+        "name": "Anthropic"
+      },
+      "name": "claude-powered",
+      "version": "unknown",
+      "purl": "pkg:mlmodel/anthropic/claude-powered",
+      "properties": [
+        {
+          "name": "ai:purpose",
+          "value": "inference"
+        },
+        {
+          "name": "ai:confirmed-in",
+          "value": "reports/llms_20260327_171617.html"
+        },
+        {
+          "name": "ai:source-url",
+          "value": "https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L158"
+        },
+        {
+          "name": "ai:eu-ai-act-risk",
+          "value": "high"
+        },
+        {
+          "name": "ai:gdpr-relevant",
+          "value": "true"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "root-llms",
+      "dependsOn": [
+        "model-gpt-4",
+        "model-gpt-4o",
+        "model-gpt-3.5",
+        "model-llama",
+        "model-mixtral",
+        "model-deepseek",
+        "model-command-r",
+        "model-llama-index",
+        "model-llama_index",
+        "model-llamaindex",
+        "model-claude-opus-4-6",
+        "model-mistral-ai",
+        "model-o1",
+        "model-o3",
+        "model-sonar",
+        "model-gpt-3.5-turbo",
+        "model-claude-3-opus",
+        "model-claude-3-haiku",
+        "model-llama_pattern",
+        "model-deepseek_pattern",
+        "model-claude-powered"
+      ]
+    },
+    {
+      "ref": "model-gpt-4",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-gpt-4o",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-gpt-3.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-llama",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-mixtral",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-deepseek",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-command-r",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-llama-index",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-llama_index",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-llamaindex",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-claude-opus-4-6",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-mistral-ai",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-o1",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-o3",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-sonar",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-gpt-3.5-turbo",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-claude-3-opus",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-claude-3-haiku",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-llama_pattern",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-deepseek_pattern",
+      "dependsOn": []
+    },
+    {
+      "ref": "model-claude-powered",
+      "dependsOn": []
+    }
+  ],
+  "vulnerabilities": []
+}

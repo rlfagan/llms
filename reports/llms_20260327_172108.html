@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI Scan: llms</title>
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;
+  --green:#3fb950;--yellow:#d29922;--red:#f85149;--orange:#e3702e;
+  --model:#7ee787;--model-bg:#0f2a0f;
+  --cve:#f85149;--cve-bg:#2d0f0f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6;display:flex;flex-direction:column;min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+code{background:var(--surface2);color:#79c0ff;padding:2px 6px;border-radius:4px;font-size:.85em;font-family:'SF Mono',Monaco,monospace}
+pre{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:16px;overflow-x:auto;margin:12px 0}
+pre code{background:none;color:#e6edf3;padding:0}
+
+/* Header */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:20px 32px}
+.header h1{font-size:1.5rem;color:var(--accent)}
+.header .meta{color:var(--muted);font-size:.85rem;margin-top:4px}
+.badges{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.badge{padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;cursor:pointer}
+.badge-cve{background:var(--cve-bg);color:var(--cve);border:1px solid var(--cve)}
+.badge-model{background:var(--model-bg);color:var(--model);border:1px solid var(--model)}
+.badge-warn{background:#2d1a00;color:var(--yellow);border:1px solid var(--yellow)}
+
+/* Layout */
+.layout{display:flex;flex:1;max-width:1400px;width:100%;margin:0 auto;padding:24px 32px;gap:32px}
+
+/* TOC sidebar */
+.toc{position:sticky;top:24px;width:220px;flex-shrink:0;align-self:flex-start}
+.toc-title{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.toc ul{list-style:none;border-left:2px solid var(--border);padding-left:12px}
+.toc li{margin-bottom:6px}
+.toc a{color:var(--muted);font-size:.85rem;display:block;padding:2px 0;transition:color .15s}
+.toc a:hover{color:var(--text);text-decoration:none}
+
+/* Main content */
+.main{flex:1;min-width:0}
+
+/* CVE panel */
+.cve-panel{background:var(--cve-bg);border:1px solid var(--cve);border-radius:8px;padding:20px;margin-bottom:28px}
+.cve-panel h2{color:var(--cve);font-size:1.1rem;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.cve-link{color:var(--cve)!important;font-weight:700;font-family:'SF Mono',Monaco,monospace}
+
+/* Report body */
+.report-body h1{font-size:1.5rem;color:var(--accent);margin:32px 0 12px;border-bottom:1px solid var(--border);padding-bottom:8px;scroll-margin-top:24px}
+.report-body h2{font-size:1.15rem;color:var(--text);margin:28px 0 10px;scroll-margin-top:24px}
+.report-body h3{font-size:1rem;color:var(--accent);margin:18px 0 8px;scroll-margin-top:24px}
+.report-body h4{font-size:.9rem;color:var(--muted);margin:12px 0 6px}
+.report-body p{margin-bottom:10px}
+.report-body ul{margin:8px 0 12px 24px}
+.report-body li{margin-bottom:4px}
+.report-body strong{color:#f0f6fc}
+
+/* Tables */
+table.rt{width:100%;border-collapse:collapse;margin:12px 0;font-size:.88rem}
+table.rt th{background:var(--surface2);color:var(--muted);padding:8px 12px;border:1px solid var(--border);text-align:left;font-weight:600}
+table.rt td{padding:8px 12px;border:1px solid var(--border);vertical-align:top;word-break:break-word}
+table.rt tr:hover td{background:var(--surface2)}
+
+/* Models section */
+.models-section{margin-top:36px}
+.models-section>h2{font-size:1.2rem;color:var(--model);margin-bottom:16px;border-bottom:1px solid var(--model-bg);padding-bottom:8px;scroll-margin-top:24px}
+.model-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--model);border-radius:8px;margin-bottom:16px;overflow:hidden}
+.model-name{background:var(--model-bg);color:var(--model);font-family:'SF Mono',Monaco,monospace;font-size:.95rem;font-weight:700;padding:10px 16px}
+
+.muted{color:var(--muted)}
+footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔍 AI Component Scan — llms</h1>
+  <div class="meta"><a href="https://github.com/rlfagan/llms" target="_blank">https://github.com/rlfagan/llms</a> &nbsp;·&nbsp; Scanned 2026-03-27 17:22</div>
+  <div class="badges">
+    <a href="#cve-panel"><span class="badge badge-cve">🚨 0 active CVEs (0 total)</span></a>
+    <a href="#confirmed-models"><span class="badge badge-model">🤖 21 models confirmed in source</span></a>
+    <a href="#security-concerns"><span class="badge badge-warn">⚠️ Security Concerns</span></a>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="toc">
+      <div class="toc-title">Contents</div>
+      <ul>
+        <li><a href="#cve-panel">🚨 CVEs (0 found)</a></li>
+        <li><a href="#ai-frameworks">📦 AI Frameworks & Libraries</a></li>
+<li><a href="#llm-integrations">📦 LLM Integrations</a></li>
+<li><a href="#embeddings">📦 Embeddings & Vector Search</a></li>
+<li><a href="#agents">📦 AI Agents & Orchestration</a></li>
+<li><a href="#ml-models">🤖 ML Models</a></li>
+<li><a href="#prompt-engineering">📦 Prompt Engineering</a></li>
+<li><a href="#ai-infrastructure">📦 AI Infrastructure</a></li>
+<li><a href="#security-concerns">🔒 Security Concerns</a></li>
+<li><a href="#confirmed-models">🤖 Confirmed Models in Codebase</a></li>
+<li><a href="#ai-bom">📦 AI Bill of Materials</a></li>
+
+        
+      </ul>
+    </nav>
+
+  <div class="main">
+
+    <!-- CVE Panel -->
+    <div class="cve-panel" id="cve-panel">
+      <h2>🚨 CVEs Referenced in Codebase <span style="font-size:.8rem;font-weight:400;color:var(--muted)">(0 unique IDs — 🔴 0 active, ✅ 0 fixed)</span></h2>
+      <p class="muted">No CVE IDs detected in this codebase.</p>
+    </div>
+
+    <!-- Report -->
+    <div class="report-body">
+      <h1 id="ai-component-scan-report--rlfaganllms">AI Component Scan Report — <code>rlfagan/llms</code></h1>
+<h2 id="ai-frameworks--libraries">1. AI Frameworks &amp; Libraries</h2>
+<table class="rt"><thead>
+<tr><th>Framework / Library</th><th>Evidence</th><th>Files</th></tr>
+</thead><tbody>
+<tr><td><strong>Hugging Face Transformers</strong></td><td>Primary library for 8 of 10 catalogued models; referenced in all model metadata tags</td><td><code>models/*/metadata.json</code>, <code>models/index.json</code></td></tr>
+<tr><td><strong>Sentence-Transformers</strong></td><td>Library for 3 embedding models (all-MiniLM-L6-v2, all-mpnet-base-v2, paraphrase-multilingual-MiniLM-L12-v2)</td><td><code>models/sentence-transformers--*/metadata.json</code></td></tr>
+<tr><td><strong>Hugging Face Hub (<code>huggingface_hub</code>)</strong></td><td>Used in <code>download_top10.py</code> via <code>snapshot_download</code> for optional weight retrieval</td><td><code>models/download_top10.py</code></td></tr>
+<tr><td><strong>PyTorch</strong></td><td>Listed as a runtime in every model&#x27;s metadata tags</td><td><code>models/*/metadata.json</code></td></tr>
+<tr><td><strong>TensorFlow / JAX</strong></td><td>Listed as alternate runtimes for BERT, XLM-RoBERTa, CLIP, ELECTRA, and others</td><td><code>models/*/metadata.json</code></td></tr>
+<tr><td><strong>ONNX / OpenVINO</strong></td><td>Tagged as export formats for several sentence-transformer and BERT models</td><td><code>models/*/metadata.json</code></td></tr>
+<tr><td><strong>Anthropic Python SDK</strong></td><td>Installed in CI (<code>pip install anthropic</code>) and used to power the scanning workflow</td><td><code>.github/workflows/ai-scan.yml</code></td></tr>
+</tbody></table>
+<h2 id="llm-integrations">2. LLM Integrations</h2>
+<table class="rt"><thead>
+<tr><th>Integration</th><th>Evidence</th><th>Files</th></tr>
+</thead><tbody>
+<tr><td><strong>Anthropic Claude API</strong></td><td>The CI/CD scanning pipeline (<code>scan.py</code>) calls Anthropic&#x27;s API using <code>ANTHROPIC_API_KEY</code> secret</td><td><code>.github/workflows/ai-scan.yml</code></td></tr>
+<tr><td><strong>LlamaIndex</strong></td><td>Referenced in the AI-BOM as a detected model/framework (<code>llama-index</code>, <code>llamaindex</code>, <code>llama_index</code>) from <code>aibom.py</code> (not included in provided files)</td><td><code>reports/*_bom.json</code></td></tr>
+<tr><td><strong>Mistral AI</strong></td><td>Detected in BOM: <code>mistral-ai</code> and <code>mixtral</code> models referenced in <code>aibom.py</code></td><td><code>reports/*_bom.json</code></td></tr>
+<tr><td><strong>Meta LLaMA</strong></td><td>Detected in BOM: <code>llama</code> model referenced in <code>aibom.py</code></td><td><code>reports/*_bom.json</code></td></tr>
+<tr><td><strong>OpenAI (models only)</strong></td><td>Two CLIP models from OpenAI are catalogued (no API integration observed)</td><td><code>models/openai--clip-vit-*/metadata.json</code></td></tr>
+</tbody></table>
+<h2 id="embeddings--vector-search">3. Embeddings &amp; Vector Search</h2>
+<table class="rt"><thead>
+<tr><th>Component</th><th>Type</th><th>Details</th></tr>
+</thead><tbody>
+<tr><td><strong>sentence-transformers/all-MiniLM-L6-v2</strong></td><td>Embedding model</td><td>~207M downloads; sentence-similarity; English; BERT-based, 6 layers</td></tr>
+<tr><td><strong>sentence-transformers/all-mpnet-base-v2</strong></td><td>Embedding model</td><td>~29M downloads; sentence-similarity; English; MPNet-based</td></tr>
+<tr><td><strong>sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2</strong></td><td>Embedding model</td><td>~26M downloads; multilingual (50+ languages); BERT-based</td></tr>
+<tr><td><strong>openai/clip-vit-large-patch14</strong></td><td>Multimodal embedding</td><td>~23M downloads; zero-shot image classification; vision-language</td></tr>
+<tr><td><strong>openai/clip-vit-base-patch32</strong></td><td>Multimodal embedding</td><td>~20M downloads; zero-shot image classification; vision-language</td></tr>
+</tbody></table>
+<p>No vector database or vector search infrastructure was detected in the codebase.</p>
+<h2 id="ai-agents--orchestration">4. AI Agents &amp; Orchestration</h2>
+<table class="rt"><thead>
+<tr><th>Component</th><th>Evidence</th></tr>
+</thead><tbody>
+<tr><td><strong>claudescan (CI scanning agent)</strong></td><td>An automated GitHub Actions workflow that uses Claude (Anthropic API) to scan repositories, generate reports, CycloneDX AI-BOMs, and topology diagrams. Commits results back to the repo.</td></tr>
+</tbody></table>
+<p>The scan pipeline (<code>ai-scan.yml</code>) orchestrates: checkout → scan via Claude → commit reports → upload artifacts → post PR comment. This constitutes a simple AI agent workflow.</p>
+<h2 id="ml-models">5. ML Models</h2>
+<p>The repository catalogues metadata for 10 Hugging Face models (no weights stored by default):</p>
+<table class="rt"><thead>
+<tr><th>Model ID</th><th>Author</th><th>Pipeline Task</th><th>Downloads</th><th>Library</th></tr>
+</thead><tbody>
+<tr><td><code>sentence-transformers/all-MiniLM-L6-v2</code></td><td>sentence-transformers</td><td>sentence-similarity</td><td>206.9M</td><td>sentence-transformers</td></tr>
+<tr><td><code>google-bert/bert-base-uncased</code></td><td>Google</td><td>fill-mask</td><td>71.7M</td><td>transformers</td></tr>
+<tr><td><code>sentence-transformers/all-mpnet-base-v2</code></td><td>sentence-transformers</td><td>sentence-similarity</td><td>28.9M</td><td>sentence-transformers</td></tr>
+<tr><td><code>sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2</code></td><td>sentence-transformers</td><td>sentence-similarity</td><td>26.5M</td><td>sentence-transformers</td></tr>
+<tr><td><code>openai/clip-vit-large-patch14</code></td><td>OpenAI</td><td>zero-shot-image-classification</td><td>23.3M</td><td>transformers</td></tr>
+<tr><td><code>laion/clap-htsat-fused</code></td><td>LAION</td><td>audio-classification</td><td>26.0M</td><td>transformers</td></tr>
+<tr><td><code>openai/clip-vit-base-patch32</code></td><td>OpenAI</td><td>zero-shot-image-classification</td><td>20.5M</td><td>transformers</td></tr>
+<tr><td><code>google/electra-base-discriminator</code></td><td>Google</td><td>pretraining</td><td>50.7M</td><td>transformers</td></tr>
+<tr><td><code>FacebookAI/xlm-roberta-base</code></td><td>FacebookAI</td><td>fill-mask</td><td>20.8M</td><td>transformers</td></tr>
+<tr><td><code>Falconsai/nsfw_image_detection</code></td><td>Falconsai</td><td>image-classification</td><td>41.0M</td><td>transformers</td></tr>
+</tbody></table>
+<p>Additionally, the AI-BOM reports reference models from <code>aibom.py</code> (file not provided): LlamaIndex, LLaMA, Mistral AI, Mixtral, and an &quot;o3&quot; model.</p>
+<h2 id="prompt-engineering">6. Prompt Engineering</h2>
+<p>No explicit prompt templates, system prompts, or prompt engineering patterns were found in the provided source files. The <code>scan.py</code> file (not included) likely contains prompts sent to Claude for analysis, but its contents are not available for review.</p>
+<h2 id="ai-infrastructure">7. AI Infrastructure</h2>
+<table class="rt"><thead>
+<tr><th>Component</th><th>Description</th><th>Files</th></tr>
+</thead><tbody>
+<tr><td><strong>GitHub Actions CI/CD</strong></td><td>Automated scanning pipeline on push/PR to <code>main</code></td><td><code>.github/workflows/ai-scan.yml</code></td></tr>
+<tr><td><strong>CycloneDX AI-BOM generation</strong></td><td>Produces CycloneDX 1.7 BOMs with <code>machine-learning-model</code> component types, EU AI Act risk annotations, and GDPR relevance flags</td><td><code>reports/*_bom.json</code></td></tr>
+<tr><td><strong>AI topology visualization</strong></td><td>Cytoscape.js-powered interactive graph of AI component relationships</td><td><code>reports/*_topology.html</code></td></tr>
+<tr><td><strong>HTML scan reports</strong></td><td>Rich dashboard-style reports with CVE tracking, model inventory, and security findings</td><td><code>reports/*.html</code></td></tr>
+<tr><td><strong>Hugging Face Hub API</strong></td><td>Model metadata fetched via REST API (<code>https://huggingface.co/api/models/</code>)</td><td><code>models/download_top10.py</code></td></tr>
+<tr><td><strong>Artifact retention</strong></td><td>Reports, BOMs, and topology diagrams uploaded as GitHub Actions artifacts (30-day retention)</td><td><code>.github/workflows/ai-scan.yml</code></td></tr>
+</tbody></table>
+<h2 id="security-concerns">8. Security Concerns</h2>
+<h3 id="cves">CVEs</h3>
+<p><strong>No CVEs</strong> were explicitly referenced in the codebase. Both scan reports confirm <code>0 active CVEs (0 total)</code>.</p>
+<h3 id="identified-security-issues">Identified Security Issues</h3>
+<table class="rt"><thead>
+<tr><th>Concern</th><th>Severity</th><th>Details</th></tr>
+</thead><tbody>
+<tr><td><strong>API key in CI environment</strong></td><td>Medium</td><td><code>ANTHROPIC_API_KEY</code> is passed as a GitHub secret to the workflow. Proper secret management is in place, but the <code>scan.py</code> script could potentially leak the key in logs if not carefully written.</td></tr>
+<tr><td><strong>Unrestricted model weight download</strong></td><td>Medium</td><td><code>download_top10.py</code> can download full model weights (<code>DOWNLOAD_WEIGHTS=1</code>) from Hugging Face without integrity verification (no hash/checksum validation). This is a supply-chain risk.</td></tr>
+<tr><td><strong>No model provenance verification</strong></td><td>Medium</td><td>Model metadata is fetched over HTTPS from Hugging Face API but there is no signature verification or hash pinning. A compromised or poisoned model could be ingested.</td></tr>
+<tr><td><strong>Broad write permissions</strong></td><td>Low</td><td>The GitHub Actions workflow has <code>contents: write</code> and <code>pull-requests: write</code> permissions. An auto-commit step (<code>git push</code>) runs on non-PR events.</td></tr>
+<tr><td><strong>NSFW detection model presence</strong></td><td>Informational</td><td><code>Falconsai/nsfw_image_detection</code> is catalogued, which processes sensitive content. If deployed, ensure appropriate data handling and privacy controls.</td></tr>
+<tr><td><strong>EU AI Act / GDPR annotations</strong></td><td>Informational</td><td>The AI-BOM flags multiple models as <code>eu-ai-act-risk: high</code> and <code>gdpr-relevant: true</code>. Organizations using these models should ensure regulatory compliance.</td></tr>
+<tr><td><strong>No <code>scan.py</code> available for review</strong></td><td>Low</td><td>The core scanning logic is not included in the provided files, making it impossible to audit prompt injection risks or data leakage in the Claude API calls.</td></tr>
+</tbody></table>
+<h2 id="summary">Summary</h2>
+<p>This repository is an <strong>AI model catalogue and automated scanning platform</strong>. It does not run ML inference directly but instead:</p>
+<p>1. <strong>Catalogues metadata</strong> for the top 10 most-downloaded Hugging Face models (sentence transformers, BERT, CLIP, ELECTRA, XLM-RoBERTa, CLAP, and a ViT-based NSFW detector)</p>
+<p>2. <strong>Runs an Anthropic Claude-powered CI/CD pipeline</strong> (<code>scan.py</code> via GitHub Actions) that automatically scans the repository for AI components and generates rich HTML reports, CycloneDX 1.7 AI-BOMs, and interactive topology diagrams</p>
+<p>3. <strong>Tracks additional models</strong> via <code>aibom.py</code> (not provided) including LlamaIndex, LLaMA, Mistral/Mixtral, and others</p>
+<p><strong>Key statistics:</strong></p>
+<ul>
+<li><strong>10 Hugging Face models</strong> catalogued with metadata (no weights stored by default)</li>
+<li><strong>12–20 models</strong> detected by the automated scanner (including references in <code>aibom.py</code>)</li>
+<li><strong>0 CVEs</strong> found in the codebase</li>
+<li><strong>1 LLM integration</strong> (Anthropic Claude for scanning)</li>
+<li><strong>Primary frameworks:</strong> Transformers, Sentence-Transformers, PyTorch, TensorFlow, JAX, ONNX</li>
+</ul>
+<p><strong>Primary risks</strong> center on supply-chain integrity (no model hash verification), the CI secret handling, and regulatory compliance for the high-risk-flagged models.</p>
+    </div>
+
+    <!-- Models -->
+    <div class="models-section" id="confirmed-models">
+      <h2>🤖 Confirmed Models in Codebase</h2>
+      <p class="muted" style="font-size:.85rem;margin-bottom:16px">
+        Model names detected directly in source files — click any row to jump to the exact location.
+      </p>
+      <div class="model-card">
+          <div class="model-name">🤖 claude-3-haiku</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229_topology.html</code></td>
+              <td>348</td>
+              <td><code>const elements = [{"data": {"id": "hub_group-client", "label": "Clients", "isHub": true, "group": "group-client", "hubCo</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_topology.html#L348" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>358</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 claude-3-haiku&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L358" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>609</td>
+              <td><code>"bom-ref": "model-claude-3-haiku",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L609" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>613</td>
+              <td><code>"name": "claude-3-haiku",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L613" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>615</td>
+              <td><code>"purl": "pkg:mlmodel/anthropic/claude-3-haiku",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L615" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 claude-3-opus</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229_topology.html</code></td>
+              <td>348</td>
+              <td><code>const elements = [{"data": {"id": "hub_group-client", "label": "Clients", "isHub": true, "group": "group-client", "hubCo</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_topology.html#L348" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>368</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 claude-3-opus&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L368" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>577</td>
+              <td><code>"bom-ref": "model-claude-3-opus",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L577" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>581</td>
+              <td><code>"name": "claude-3-opus",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L581" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>583</td>
+              <td><code>"purl": "pkg:mlmodel/anthropic/claude-3-opus",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L583" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 claude-opus-4-6</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>344</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 claude-opus-4-6&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L344" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>349</td>
+              <td><code>&lt;td&gt;&lt;code&gt;model="claude-opus-4-6",&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L349" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>354</td>
+              <td><code>&lt;td&gt;&lt;code&gt;model="claude-opus-4-6",&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L354" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229_bom.json</code></td>
+              <td>417</td>
+              <td><code>"bom-ref": "model-claude-opus-4-6",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_bom.json#L417" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229_bom.json</code></td>
+              <td>421</td>
+              <td><code>"name": "claude-opus-4-6",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_bom.json#L421" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 claude-powered</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>158</td>
+              <td><code>&lt;p&gt;The workflow (&lt;code&gt;ai-scan.yml&lt;/code&gt;) passes &lt;code&gt;ANTHROPIC_API_KEY&lt;/code&gt; from GitHub Secrets to drive the Claude</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L158" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 command-r</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>178</td>
+              <td><code>&lt;tr&gt;&lt;td&gt;&lt;code&gt;command[\-_]r[\w\.\-]*&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Cohere Command-R&lt;/td&gt;&lt;/tr&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L178" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>188</td>
+              <td><code>&lt;tr&gt;&lt;td&gt;&lt;code&gt;command[\-_]r[\w\.\-]*&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Cohere Command-R&lt;/td&gt;&lt;/tr&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L188" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>408</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 command-r&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L408" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>413</td>
+              <td><code>&lt;td&gt;&lt;code&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;command[\-_]r[\w\.\-]*&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Cohere Command-R&lt;/t</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L413" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>418</td>
+              <td><code>&lt;td&gt;&lt;code&gt;| `command[\-_]r[\w\.\-]*` | Cohere Command-R |&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L418" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 deepseek</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>177</td>
+              <td><code>&lt;tr&gt;&lt;td&gt;&lt;code&gt;deepseek[\-_]?[\w\.\-]*&lt;/code&gt;&lt;/td&gt;&lt;td&gt;DeepSeek models&lt;/td&gt;&lt;/tr&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L177" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>359</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 deepseek&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L359" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>364</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"deepseek":  ("DeepSeek",     "deepseek"),&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L364" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>369</td>
+              <td><code>&lt;td&gt;&lt;code&gt;r'deepseek[\-_]?[\w\.\-]*',&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L369" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229_bom.json</code></td>
+              <td>289</td>
+              <td><code>"bom-ref": "model-deepseek",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_bom.json#L289" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 deepseek_pattern</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229_topology.html</code></td>
+              <td>348</td>
+              <td><code>const elements = [{"data": {"id": "hub_group-client", "label": "Clients", "isHub": true, "group": "group-client", "hubCo</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_topology.html#L348" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>453</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 deepseek_pattern&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L453" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>673</td>
+              <td><code>"bom-ref": "model-deepseek_pattern",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L673" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>677</td>
+              <td><code>"name": "deepseek_pattern",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L677" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>679</td>
+              <td><code>"purl": "pkg:mlmodel/deepseek/deepseek_pattern",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L679" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 gpt-3.5</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>171</td>
+              <td><code>&lt;tr&gt;&lt;td&gt;&lt;code&gt;gpt-3\.5[o\w\-\.]*&lt;/code&gt;&lt;/td&gt;&lt;td&gt;GPT-3.5 Turbo variants&lt;/td&gt;&lt;/tr&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L171" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229_topology.html</code></td>
+              <td>348</td>
+              <td><code>const elements = [{"data": {"id": "hub_group-client", "label": "Clients", "isHub": true, "group": "group-client", "hubCo</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_topology.html#L348" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>181</td>
+              <td><code>&lt;tr&gt;&lt;td&gt;&lt;code&gt;gpt-3\.5[o\w\-\.]*&lt;/code&gt;&lt;/td&gt;&lt;td&gt;GPT-3.5 Turbo variants&lt;/td&gt;&lt;/tr&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L181" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>463</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 gpt-3.5&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L463" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>468</td>
+              <td><code>&lt;td&gt;&lt;code&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;gpt-3\.5[o\w\-\.]*&lt;/code&gt;&lt;/td&gt;&lt;td&gt;GPT-3.5 Turbo variants&lt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L468" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 gpt-3.5-turbo</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229_topology.html</code></td>
+              <td>348</td>
+              <td><code>const elements = [{"data": {"id": "hub_group-client", "label": "Clients", "isHub": true, "group": "group-client", "hubCo</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_topology.html#L348" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>483</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 gpt-3.5-turbo&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L483" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>545</td>
+              <td><code>"bom-ref": "model-gpt-3.5-turbo",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L545" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>549</td>
+              <td><code>"name": "gpt-3.5-turbo",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L549" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>551</td>
+              <td><code>"purl": "pkg:mlmodel/openai/gpt-3.5-turbo",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L551" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 gpt-4</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>170</td>
+              <td><code>&lt;tr&gt;&lt;td&gt;&lt;code&gt;gpt-4[o\w\-\.]*&lt;/code&gt;&lt;/td&gt;&lt;td&gt;GPT-4, GPT-4o variants&lt;/td&gt;&lt;/tr&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L170" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>374</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 gpt-4&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L374" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>379</td>
+              <td><code>&lt;td&gt;&lt;code&gt;r'gpt-4[o\w\-\.]*',&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L379" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229_bom.json</code></td>
+              <td>321</td>
+              <td><code>"bom-ref": "model-gpt-4",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_bom.json#L321" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229_bom.json</code></td>
+              <td>325</td>
+              <td><code>"name": "gpt-4",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_bom.json#L325" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 gpt-4o</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>170</td>
+              <td><code>&lt;tr&gt;&lt;td&gt;&lt;code&gt;gpt-4[o\w\-\.]*&lt;/code&gt;&lt;/td&gt;&lt;td&gt;GPT-4, GPT-4o variants&lt;/td&gt;&lt;/tr&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L170" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229_topology.html</code></td>
+              <td>348</td>
+              <td><code>const elements = [{"data": {"id": "hub_group-client", "label": "Clients", "isHub": true, "group": "group-client", "hubCo</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_topology.html#L348" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>180</td>
+              <td><code>&lt;tr&gt;&lt;td&gt;&lt;code&gt;gpt-4[o\w\-\.]*&lt;/code&gt;&lt;/td&gt;&lt;td&gt;GPT-4 / GPT-4o variants&lt;/td&gt;&lt;/tr&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L180" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>498</td>
+              <td><code>&lt;td&gt;&lt;code&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;gpt-4[o\w\-\.]*&lt;/code&gt;&lt;/td&gt;&lt;td&gt;GPT-4, GPT-4o variants&lt;/td</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L498" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>513</td>
+              <td><code>&lt;td&gt;&lt;code&gt;| `gpt-4[o\w\-\.]*` | GPT-4, GPT-4o variants |&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L513" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 llama</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>175</td>
+              <td><code>&lt;tr&gt;&lt;td&gt;&lt;code&gt;llama[\-_]?[\w\.\-]*&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Meta LLaMA models&lt;/td&gt;&lt;/tr&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L175" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>384</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 llama&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L384" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>389</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"llama":     ("Meta",         "meta"),&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L389" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>394</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"cohere", "gemini", "mistral", "ollama", "litellm", "openrouter",&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L394" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>399</td>
+              <td><code>&lt;td&gt;&lt;code&gt;r'llama[\-_]?[\w\.\-]*',&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L399" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 llama-index</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>214</td>
+              <td><code>&lt;tr&gt;&lt;td&gt;&lt;code&gt;llama-index&lt;/code&gt; / &lt;code&gt;llama_index&lt;/code&gt;&lt;/td&gt;&lt;td&gt;LlamaIndex&lt;/td&gt;&lt;td&gt;MIT&lt;/td&gt;&lt;td&gt;Orchestration&lt;/td&gt;&lt;/t</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L214" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>404</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"llama":   ["litellm", "llama-index", "llama_index"],&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L404" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>409</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 llama-index&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L409" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>414</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"llama-index":       {"license": "MIT",        "supplier": "LlamaIndex",       "type": "library", "purpose": "</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L414" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>419</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"llama":   ["litellm", "llama-index", "llama_index"],&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L419" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 llama_index</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>214</td>
+              <td><code>&lt;tr&gt;&lt;td&gt;&lt;code&gt;llama-index&lt;/code&gt; / &lt;code&gt;llama_index&lt;/code&gt;&lt;/td&gt;&lt;td&gt;LlamaIndex&lt;/td&gt;&lt;td&gt;MIT&lt;/td&gt;&lt;td&gt;Orchestration&lt;/td&gt;&lt;/t</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L214" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>404</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"llama":   ["litellm", "llama-index", "llama_index"],&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L404" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>419</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"llama":   ["litellm", "llama-index", "llama_index"],&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L419" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>424</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 llama_index&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L424" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>429</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"llama_index":       {"license": "MIT",        "supplier": "LlamaIndex",       "type": "library", "purpose": "</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L429" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 llama_pattern</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229_topology.html</code></td>
+              <td>348</td>
+              <td><code>const elements = [{"data": {"id": "hub_group-client", "label": "Clients", "isHub": true, "group": "group-client", "hubCo</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_topology.html#L348" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617.html</code></td>
+              <td>633</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 llama_pattern&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617.html#L633" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>641</td>
+              <td><code>"bom-ref": "model-llama_pattern",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L641" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>645</td>
+              <td><code>"name": "llama_pattern",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L645" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171617_bom.json</code></td>
+              <td>647</td>
+              <td><code>"purl": "pkg:mlmodel/meta/llama_pattern",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171617_bom.json#L647" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 llamaindex</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>214</td>
+              <td><code>&lt;tr&gt;&lt;td&gt;&lt;code&gt;llama-index&lt;/code&gt; / &lt;code&gt;llama_index&lt;/code&gt;&lt;/td&gt;&lt;td&gt;LlamaIndex&lt;/td&gt;&lt;td&gt;MIT&lt;/td&gt;&lt;td&gt;Orchestration&lt;/td&gt;&lt;/t</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L214" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>328</td>
+              <td><code>&lt;tr&gt;&lt;td&gt;&lt;strong&gt;Orchestration Frameworks&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;8&lt;/td&gt;&lt;td&gt;LangChain, LlamaIndex, Haystack, MCP, A2A-SDK&lt;/td&gt;&lt;/</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L328" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>414</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"llama-index":       {"license": "MIT",        "supplier": "LlamaIndex",       "type": "library", "purpose": "</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L414" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>429</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"llama_index":       {"license": "MIT",        "supplier": "LlamaIndex",       "type": "library", "purpose": "</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L429" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>434</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"openai", "anthropic", "claude", "langchain", "llamaindex", "llama_index",&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L434" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 mistral-ai</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>464</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 mistral-ai&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L464" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>469</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"mistral":   ("Mistral AI",   "mistral-ai"),&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L469" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>474</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"mixtral":   ("Mistral AI",   "mistral-ai"),&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L474" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>484</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"mixtral":   ("Mistral AI",   "mistral-ai"),&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L484" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229_bom.json</code></td>
+              <td>193</td>
+              <td><code>"bom-ref": "model-mistral-ai",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_bom.json#L193" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 mixtral</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>176</td>
+              <td><code>&lt;tr&gt;&lt;td&gt;&lt;code&gt;mixtral[\-_]?[\w\.\-]*&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Mixtral MoE models&lt;/td&gt;&lt;/tr&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L176" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>474</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"mixtral":   ("Mistral AI",   "mistral-ai"),&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L474" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>479</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 mixtral&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L479" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>484</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"mixtral":   ("Mistral AI",   "mistral-ai"),&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L484" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>489</td>
+              <td><code>&lt;td&gt;&lt;code&gt;r'mixtral[\-_]?[\w\.\-]*',&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L489" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 o1</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>499</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 o1&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L499" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>504</td>
+              <td><code>&lt;td&gt;&lt;code&gt;r'o1[\-\w]*',&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L504" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229_bom.json</code></td>
+              <td>385</td>
+              <td><code>"bom-ref": "model-o1",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_bom.json#L385" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229_bom.json</code></td>
+              <td>389</td>
+              <td><code>"name": "o1",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_bom.json#L389" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229_bom.json</code></td>
+              <td>391</td>
+              <td><code>"purl": "pkg:mlmodel/unknown/o1",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_bom.json#L391" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 o3</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>509</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 o3&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L509" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>514</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"boto3":             {"license": "Apache-2.0", "supplier": "Amazon",           "type": "library", "purpose": "</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L514" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>519</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"aioboto3":          {"license": "Apache-2.0", "supplier": "Amazon",           "type": "library", "purpose": "</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L519" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>524</td>
+              <td><code>&lt;td&gt;&lt;code&gt;r'o3[\-\w]*',&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L524" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>529</td>
+              <td><code>&lt;td&gt;&lt;code&gt;"titan":   ["boto3", "aioboto3"],&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L529" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 sonar</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>539</td>
+              <td><code>&lt;div class="model-name"&gt;🤖 sonar&lt;/div&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L539" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229.html</code></td>
+              <td>544</td>
+              <td><code>&lt;td&gt;&lt;code&gt;r'sonar[\-_]?[\w\.\-]*',&lt;/code&gt;&lt;/td&gt;</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229.html#L544" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229_bom.json</code></td>
+              <td>353</td>
+              <td><code>"bom-ref": "model-sonar",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_bom.json#L353" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229_bom.json</code></td>
+              <td>357</td>
+              <td><code>"name": "sonar",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_bom.json#L357" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>reports/llms_20260327_171229_bom.json</code></td>
+              <td>359</td>
+              <td><code>"purl": "pkg:mlmodel/unknown/sonar",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/reports/llms_20260327_171229_bom.json#L359" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>Generated by claudescan &nbsp;·&nbsp; Powered by Claude Opus 4.6</footer>
+</body>
+</html>
