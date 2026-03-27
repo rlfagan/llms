@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI Scan: llms</title>
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;
+  --green:#3fb950;--yellow:#d29922;--red:#f85149;--orange:#e3702e;
+  --model:#7ee787;--model-bg:#0f2a0f;
+  --cve:#f85149;--cve-bg:#2d0f0f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6;display:flex;flex-direction:column;min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+code{background:var(--surface2);color:#79c0ff;padding:2px 6px;border-radius:4px;font-size:.85em;font-family:'SF Mono',Monaco,monospace}
+pre{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:16px;overflow-x:auto;margin:12px 0}
+pre code{background:none;color:#e6edf3;padding:0}
+
+/* Header */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:20px 32px}
+.header h1{font-size:1.5rem;color:var(--accent)}
+.header .meta{color:var(--muted);font-size:.85rem;margin-top:4px}
+.badges{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.badge{padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;cursor:pointer}
+.badge-cve{background:var(--cve-bg);color:var(--cve);border:1px solid var(--cve)}
+.badge-model{background:var(--model-bg);color:var(--model);border:1px solid var(--model)}
+.badge-warn{background:#2d1a00;color:var(--yellow);border:1px solid var(--yellow)}
+
+/* Layout */
+.layout{display:flex;flex:1;max-width:1400px;width:100%;margin:0 auto;padding:24px 32px;gap:32px}
+
+/* TOC sidebar */
+.toc{position:sticky;top:24px;width:220px;flex-shrink:0;align-self:flex-start}
+.toc-title{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.toc ul{list-style:none;border-left:2px solid var(--border);padding-left:12px}
+.toc li{margin-bottom:6px}
+.toc a{color:var(--muted);font-size:.85rem;display:block;padding:2px 0;transition:color .15s}
+.toc a:hover{color:var(--text);text-decoration:none}
+
+/* Main content */
+.main{flex:1;min-width:0}
+
+/* CVE panel */
+.cve-panel{background:var(--cve-bg);border:1px solid var(--cve);border-radius:8px;padding:20px;margin-bottom:28px}
+.cve-panel h2{color:var(--cve);font-size:1.1rem;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.cve-link{color:var(--cve)!important;font-weight:700;font-family:'SF Mono',Monaco,monospace}
+
+/* Report body */
+.report-body h1{font-size:1.5rem;color:var(--accent);margin:32px 0 12px;border-bottom:1px solid var(--border);padding-bottom:8px;scroll-margin-top:24px}
+.report-body h2{font-size:1.15rem;color:var(--text);margin:28px 0 10px;scroll-margin-top:24px}
+.report-body h3{font-size:1rem;color:var(--accent);margin:18px 0 8px;scroll-margin-top:24px}
+.report-body h4{font-size:.9rem;color:var(--muted);margin:12px 0 6px}
+.report-body p{margin-bottom:10px}
+.report-body ul{margin:8px 0 12px 24px}
+.report-body li{margin-bottom:4px}
+.report-body strong{color:#f0f6fc}
+
+/* Tables */
+table.rt{width:100%;border-collapse:collapse;margin:12px 0;font-size:.88rem}
+table.rt th{background:var(--surface2);color:var(--muted);padding:8px 12px;border:1px solid var(--border);text-align:left;font-weight:600}
+table.rt td{padding:8px 12px;border:1px solid var(--border);vertical-align:top;word-break:break-word}
+table.rt tr:hover td{background:var(--surface2)}
+
+/* Models section */
+.models-section{margin-top:36px}
+.models-section>h2{font-size:1.2rem;color:var(--model);margin-bottom:16px;border-bottom:1px solid var(--model-bg);padding-bottom:8px;scroll-margin-top:24px}
+.model-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--model);border-radius:8px;margin-bottom:16px;overflow:hidden}
+.model-name{background:var(--model-bg);color:var(--model);font-family:'SF Mono',Monaco,monospace;font-size:.95rem;font-weight:700;padding:10px 16px}
+
+.muted{color:var(--muted)}
+footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔍 AI Component Scan — llms</h1>
+  <div class="meta"><a href="https://github.com/rlfagan/llms" target="_blank">https://github.com/rlfagan/llms</a> &nbsp;·&nbsp; Scanned 2026-03-27 17:14</div>
+  <div class="badges">
+    <a href="#cve-panel"><span class="badge badge-cve">🚨 0 active CVEs (0 total)</span></a>
+    <a href="#confirmed-models"><span class="badge badge-model">🤖 12 models confirmed in source</span></a>
+    <a href="#security-concerns"><span class="badge badge-warn">⚠️ Security Concerns</span></a>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="toc">
+      <div class="toc-title">Contents</div>
+      <ul>
+        <li><a href="#cve-panel">🚨 CVEs (0 found)</a></li>
+        <li><a href="#ai-frameworks">📦 AI Frameworks & Libraries</a></li>
+<li><a href="#llm-integrations">📦 LLM Integrations</a></li>
+<li><a href="#embeddings">📦 Embeddings & Vector Search</a></li>
+<li><a href="#agents">📦 AI Agents & Orchestration</a></li>
+<li><a href="#ml-models">🤖 ML Models</a></li>
+<li><a href="#prompt-engineering">📦 Prompt Engineering</a></li>
+<li><a href="#ai-infrastructure">📦 AI Infrastructure</a></li>
+<li><a href="#security-concerns">🔒 Security Concerns</a></li>
+<li><a href="#confirmed-models">🤖 Confirmed Models in Codebase</a></li>
+<li><a href="#ai-bom">📦 AI Bill of Materials</a></li>
+<li><a href="llms_20260327_171229_topology.html" target="_blank">🗺️ AI System Topology ↗</a></li>
+
+        <li><a href="llms_20260327_171229_topology.html" target="_blank">🗺️ AI System Topology ↗</a></li>
+
+      </ul>
+    </nav>
+
+  <div class="main">
+
+    <!-- CVE Panel -->
+    <div class="cve-panel" id="cve-panel">
+      <h2>🚨 CVEs Referenced in Codebase <span style="font-size:.8rem;font-weight:400;color:var(--muted)">(0 unique IDs — 🔴 0 active, ✅ 0 fixed)</span></h2>
+      <p class="muted">No CVE IDs detected in this codebase.</p>
+    </div>
+
+    <!-- Report -->
+    <div class="report-body">
+      <h1 id="ai-component-analysis-report">AI Component Analysis Report</h1>
+<h2 id="ai-frameworks--libraries">1. AI Frameworks &amp; Libraries</h2>
+<p>This repository is itself an <strong>AI component scanning tool</strong> that catalogs AI/ML libraries and generates AI Bills of Materials (AI-BOMs). The <code>aibom.py</code> file contains a comprehensive registry of known AI components:</p>
+<table class="rt"><thead>
+<tr><th>Library</th><th>Supplier</th><th>License</th><th>Purpose</th></tr>
+</thead><tbody>
+<tr><td><code>torch</code></td><td>Meta</td><td>BSD-3-Clause</td><td>ML framework</td></tr>
+<tr><td><code>tensorflow</code></td><td>Google</td><td>Apache-2.0</td><td>ML framework</td></tr>
+<tr><td><code>keras</code></td><td>Google</td><td>Apache-2.0</td><td>ML framework</td></tr>
+<tr><td><code>jax</code></td><td>Google</td><td>Apache-2.0</td><td>ML framework</td></tr>
+<tr><td><code>transformers</code></td><td>Hugging Face</td><td>Apache-2.0</td><td>ML framework</td></tr>
+<tr><td><code>scikit-learn</code> / <code>sklearn</code></td><td>scikit-learn</td><td>BSD-3-Clause</td><td>ML framework</td></tr>
+<tr><td><code>spacy</code></td><td>Explosion</td><td>MIT</td><td>NLP</td></tr>
+<tr><td><code>nltk</code></td><td>NLTK</td><td>Apache-2.0</td><td>NLP</td></tr>
+<tr><td><code>diffusers</code></td><td>Hugging Face</td><td>Apache-2.0</td><td>Generative image</td></tr>
+<tr><td><code>tokenizers</code></td><td>Hugging Face</td><td>Apache-2.0</td><td>Tokenization</td></tr>
+</tbody></table>
+<p><strong>Runtime dependency used by the scanner itself:</strong></p>
+<table class="rt"><thead>
+<tr><th>Library</th><th>Purpose</th><th>Used In</th></tr>
+</thead><tbody>
+<tr><td><code>anthropic</code></td><td>Claude API SDK for report generation</td><td><code>scan.py</code></td></tr>
+<tr><td><code>requests</code></td><td>HTTP calls</td><td><code>aibom.py</code></td></tr>
+</tbody></table>
+<h2 id="llm-integrations">2. LLM Integrations</h2>
+<h3 id="direct-llm-usage-scanner-tool">Direct LLM Usage (Scanner Tool)</h3>
+<p>The scanner (<code>scan.py</code>) directly uses the <strong>Anthropic Claude API</strong> to analyze repository code and produce reports. It imports the <code>anthropic</code> Python SDK.</p>
+<h3 id="cataloged-llm-sdks-in-aibompy-registry">Cataloged LLM SDKs (in <code>aibom.py</code> registry)</h3>
+<table class="rt"><thead>
+<tr><th>Package</th><th>Supplier</th><th>License</th><th>Purpose</th></tr>
+</thead><tbody>
+<tr><td><code>openai</code></td><td>OpenAI</td><td>Apache-2.0</td><td>LLM integration</td></tr>
+<tr><td><code>anthropic</code></td><td>Anthropic</td><td>MIT</td><td>LLM integration</td></tr>
+<tr><td><code>google-generativeai</code></td><td>Google</td><td>Apache-2.0</td><td>LLM integration</td></tr>
+<tr><td><code>google-genai</code></td><td>Google</td><td>Apache-2.0</td><td>LLM integration</td></tr>
+<tr><td><code>google-cloud-aiplatform</code></td><td>Google</td><td>Apache-2.0</td><td>LLM integration</td></tr>
+<tr><td><code>cohere</code></td><td>Cohere</td><td>MIT</td><td>LLM integration</td></tr>
+<tr><td><code>mistralai</code></td><td>Mistral AI</td><td>Apache-2.0</td><td>LLM integration</td></tr>
+<tr><td><code>groq</code></td><td>Groq</td><td>Apache-2.0</td><td>LLM integration</td></tr>
+<tr><td><code>together</code></td><td>Together AI</td><td>Apache-2.0</td><td>LLM integration</td></tr>
+<tr><td><code>replicate</code></td><td>Replicate</td><td>Apache-2.0</td><td>LLM integration</td></tr>
+<tr><td><code>litellm</code></td><td>BerriAI</td><td>MIT</td><td>LLM proxy</td></tr>
+</tbody></table>
+<h3 id="model-reference-detection">Model Reference Detection</h3>
+<p><code>scan.py</code> defines regex patterns to detect model references in scanned codebases:</p>
+<table class="rt"><thead>
+<tr><th>Pattern</th><th>Target Models</th></tr>
+</thead><tbody>
+<tr><td><code>gpt-4[o\w\-\.]*</code></td><td>GPT-4, GPT-4o variants</td></tr>
+<tr><td><code>gpt-3\.5[o\w\-\.]*</code></td><td>GPT-3.5 Turbo variants</td></tr>
+<tr><td><code>claude-[\w\.\-]+</code></td><td>Claude model family</td></tr>
+<tr><td><code>gemini-[\w\.\-]+</code></td><td>Google Gemini models</td></tr>
+<tr><td><code>mistral-[\w\.\-]+</code></td><td>Mistral models</td></tr>
+<tr><td><code>llama[\-_]?[\w\.\-]*</code></td><td>Meta LLaMA models</td></tr>
+<tr><td><code>mixtral[\-_]?[\w\.\-]*</code></td><td>Mixtral MoE models</td></tr>
+<tr><td><code>deepseek[\-_]?[\w\.\-]*</code></td><td>DeepSeek models</td></tr>
+<tr><td><code>command[\-_]r[\w\.\-]*</code></td><td>Cohere Command-R</td></tr>
+<tr><td><code>text[\-_]embedding[\-_][\w\.\-]+</code></td><td>Embedding models</td></tr>
+</tbody></table>
+<h2 id="embeddings--vector-search">3. Embeddings &amp; Vector Search</h2>
+<h3 id="cataloged-vector-dbsearch-components-in-aibompy">Cataloged Vector DB/Search Components (in <code>aibom.py</code>)</h3>
+<table class="rt"><thead>
+<tr><th>Package</th><th>Supplier</th><th>License</th><th>Type</th></tr>
+</thead><tbody>
+<tr><td><code>pinecone-client</code> / <code>pinecone</code></td><td>Pinecone</td><td>Apache-2.0</td><td>Vector DB</td></tr>
+<tr><td><code>weaviate-client</code></td><td>Weaviate</td><td>BSD-3-Clause</td><td>Vector DB</td></tr>
+<tr><td><code>chromadb</code></td><td>Chroma</td><td>Apache-2.0</td><td>Vector DB</td></tr>
+<tr><td><code>faiss-cpu</code> / <code>faiss-gpu</code></td><td>Meta</td><td>MIT</td><td>Vector search</td></tr>
+<tr><td><code>qdrant-client</code></td><td>Qdrant</td><td>Apache-2.0</td><td>Vector DB</td></tr>
+<tr><td><code>pymilvus</code></td><td>Zilliz</td><td>Apache-2.0</td><td>Vector DB</td></tr>
+<tr><td><code>redisvl</code></td><td>Redis</td><td>MIT</td><td>Vector DB</td></tr>
+</tbody></table>
+<h3 id="embedding-models-in-models-directory">Embedding Models in <code>models/</code> Directory</h3>
+<p>The repository includes metadata for top Hugging Face embedding/similarity models:</p>
+<table class="rt"><thead>
+<tr><th>Model ID</th><th>Pipeline Task</th><th>Downloads</th><th>Library</th></tr>
+</thead><tbody>
+<tr><td><code>sentence-transformers/all-MiniLM-L6-v2</code></td><td>sentence-similarity</td><td>206.9M</td><td>sentence-transformers</td></tr>
+<tr><td><code>sentence-transformers/all-mpnet-base-v2</code></td><td>sentence-similarity</td><td>28.9M</td><td>sentence-transformers</td></tr>
+<tr><td><code>sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2</code></td><td>sentence-similarity</td><td>26.5M</td><td>sentence-transformers</td></tr>
+<tr><td><code>openai/clip-vit-large-patch14</code></td><td>zero-shot-image-classification</td><td>23.3M</td><td>transformers</td></tr>
+<tr><td><code>openai/clip-vit-base-patch32</code></td><td>zero-shot-image-classification</td><td>20.5M</td><td>transformers</td></tr>
+</tbody></table>
+<h2 id="ai-agents--orchestration">4. AI Agents &amp; Orchestration</h2>
+<h3 id="cataloged-orchestration-frameworks-in-aibompy">Cataloged Orchestration Frameworks (in <code>aibom.py</code>)</h3>
+<table class="rt"><thead>
+<tr><th>Package</th><th>Supplier</th><th>License</th><th>Purpose</th></tr>
+</thead><tbody>
+<tr><td><code>langchain</code></td><td>LangChain</td><td>MIT</td><td>Orchestration</td></tr>
+<tr><td><code>langchain-core</code></td><td>LangChain</td><td>MIT</td><td>Orchestration</td></tr>
+<tr><td><code>langchain-community</code></td><td>LangChain</td><td>MIT</td><td>Orchestration</td></tr>
+<tr><td><code>langsmith</code></td><td>LangChain</td><td>MIT</td><td>Observability</td></tr>
+<tr><td><code>llama-index</code> / <code>llama_index</code></td><td>LlamaIndex</td><td>MIT</td><td>Orchestration</td></tr>
+<tr><td><code>haystack-ai</code></td><td>deepset</td><td>Apache-2.0</td><td>Orchestration</td></tr>
+<tr><td><code>semantic-router</code></td><td>Aurelio AI</td><td>MIT</td><td>Routing</td></tr>
+<tr><td><code>mcp</code></td><td>Anthropic</td><td>MIT</td><td>Agent protocol (Model Context Protocol)</td></tr>
+<tr><td><code>a2a-sdk</code></td><td>Google</td><td>Apache-2.0</td><td>Agent-to-agent protocol</td></tr>
+</tbody></table>
+<h3 id="scanner-orchestration-architecture">Scanner Orchestration Architecture</h3>
+<p>The scanner itself acts as an AI-powered pipeline:</p>
+<p>1. <strong>File collection</strong> → Gathers repository files with AI-relevance filtering</p>
+<p>2. <strong>Claude API analysis</strong> → Sends code to Anthropic Claude for structured analysis</p>
+<p>3. <strong>AI-BOM generation</strong> → <code>aibom.py</code> produces CycloneDX 1.7 AI-BOM</p>
+<p>4. <strong>Topology generation</strong> → <code>topology.py</code> builds system topology visualization</p>
+<p>5. <strong>Report assembly</strong> → Markdown, HTML, and JSON outputs</p>
+<h2 id="ml-models">5. ML Models</h2>
+<h3 id="models-cataloged-in-models-directory">Models Cataloged in <code>models/</code> Directory</h3>
+<table class="rt"><thead>
+<tr><th>Model ID</th><th>Author</th><th>Task</th><th>License</th><th>Framework</th></tr>
+</thead><tbody>
+<tr><td><code>sentence-transformers/all-MiniLM-L6-v2</code></td><td>sentence-transformers</td><td>Sentence similarity</td><td>Apache-2.0</td><td>sentence-transformers, PyTorch, TF, ONNX</td></tr>
+<tr><td><code>google-bert/bert-base-uncased</code></td><td>Google</td><td>Fill-mask</td><td>Apache-2.0</td><td>transformers (PyTorch, TF, JAX, CoreML, ONNX)</td></tr>
+<tr><td><code>sentence-transformers/all-mpnet-base-v2</code></td><td>sentence-transformers</td><td>Sentence similarity</td><td>Apache-2.0</td><td>sentence-transformers, PyTorch, ONNX</td></tr>
+<tr><td><code>sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2</code></td><td>sentence-transformers</td><td>Sentence similarity</td><td>Apache-2.0</td><td>sentence-transformers, multilingual</td></tr>
+<tr><td><code>openai/clip-vit-large-patch14</code></td><td>OpenAI</td><td>Zero-shot image classification</td><td>(unspecified)</td><td>transformers (PyTorch, TF, JAX)</td></tr>
+<tr><td><code>openai/clip-vit-base-patch32</code></td><td>OpenAI</td><td>Zero-shot image classification</td><td>(unspecified)</td><td>transformers (PyTorch, TF, JAX)</td></tr>
+<tr><td><code>FacebookAI/xlm-roberta-base</code></td><td>FacebookAI</td><td>Fill-mask (multilingual, 100 languages)</td><td>MIT</td><td>transformers (PyTorch, TF, JAX, ONNX)</td></tr>
+<tr><td><code>google/electra-base-discriminator</code></td><td>Google</td><td>Pretraining (discriminator)</td><td>Apache-2.0</td><td>transformers (PyTorch, TF, JAX)</td></tr>
+<tr><td><code>Falconsai/nsfw_image_detection</code></td><td>Falconsai</td><td>Image classification (ViT-based)</td><td>Apache-2.0</td><td>transformers (PyTorch)</td></tr>
+<tr><td><code>laion/clap-htsat-fused</code></td><td>LAION</td><td>Audio classification / zero-shot</td><td>Apache-2.0</td><td>transformers (PyTorch)</td></tr>
+</tbody></table>
+<h3 id="model-download-script">Model Download Script</h3>
+<p><code>models/download_top10.py</code> fetches metadata from the Hugging Face Hub API and optionally downloads full model weights via <code>huggingface_hub.snapshot_download()</code>.</p>
+<h3 id="hugging-face-hub-integration-in-aibompy">Hugging Face Hub Integration (in <code>aibom.py</code>)</h3>
+<table class="rt"><thead>
+<tr><th>Package</th><th>Supplier</th><th>License</th><th>Purpose</th></tr>
+</thead><tbody>
+<tr><td><code>huggingface-hub</code></td><td>Hugging Face</td><td>Apache-2.0</td><td>Model registry</td></tr>
+</tbody></table>
+<h2 id="prompt-engineering">6. Prompt Engineering</h2>
+<h3 id="system-prompt-in-scanpy">System Prompt in <code>scan.py</code></h3>
+<p>The scanner constructs a structured prompt for Claude that:</p>
+<ul>
+<li>Provides all collected repository file contents as context</li>
+<li>Requests analysis organized into specific sections matching <code>SECTIONS</code> constant</li>
+<li>Instructs Claude to identify AI frameworks, LLM integrations, embeddings, agents, models, prompts, infrastructure, and security concerns</li>
+<li>Expects markdown-formatted structured output with section headings</li>
+</ul>
+<h3 id="model-reference-extraction">Model Reference Extraction</h3>
+<p>The <code>MODEL_PATTERNS</code> list in <code>scan.py</code> serves as a prompt-adjacent heuristic to pre-identify model references before sending to Claude, supplementing the LLM analysis with deterministic pattern matching.</p>
+<h3 id="ai-keyword-detection">AI Keyword Detection</h3>
+<p>The <code>AI_KEYWORDS</code> set acts as a relevance filter to determine which files to include in the Claude analysis prompt, effectively functioning as a retrieval heuristic.</p>
+<h2 id="ai-infrastructure">7. AI Infrastructure</h2>
+<h3 id="cicd-pipeline-githubworkflowsai-scanyml">CI/CD Pipeline (<code>.github/workflows/ai-scan.yml</code>)</h3>
+<table class="rt"><thead>
+<tr><th>Component</th><th>Details</th></tr>
+</thead><tbody>
+<tr><td><strong>Trigger</strong></td><td>Push to <code>main</code>, PRs to <code>main</code>, manual dispatch</td></tr>
+<tr><td><strong>Runtime</strong></td><td>Ubuntu latest, Python 3.11</td></tr>
+<tr><td><strong>Dependencies</strong></td><td><code>anthropic</code>, <code>requests</code></td></tr>
+<tr><td><strong>Secret</strong></td><td><code>ANTHROPIC_API_KEY</code> (GitHub Actions secret)</td></tr>
+<tr><td><strong>Artifacts</strong></td><td>HTML report (30-day retention), CycloneDX AI-BOM JSON (30-day), Topology diagram HTML (30-day)</td></tr>
+<tr><td><strong>Auto-commit</strong></td><td>Reports committed back to repo on non-PR events</td></tr>
+<tr><td><strong>PR Integration</strong></td><td>Scan results posted as PR comment (up to 65KB)</td></tr>
+</tbody></table>
+<h3 id="ai-bom-generation-aibompy">AI-BOM Generation (<code>aibom.py</code>)</h3>
+<ul>
+<li>Generates <strong>CycloneDX 1.7</strong> compatible AI Bill of Materials</li>
+<li>Parses dependency versions from <code>requirements.txt</code> files</li>
+<li>Maps known AI components to metadata (license, supplier, purpose)</li>
+<li>Outputs both JSON BOM and HTML section</li>
+</ul>
+<h3 id="topology-generation-topologypy">Topology Generation (<code>topology.py</code>)</h3>
+<ul>
+<li>Builds an AI system topology prompt for Claude</li>
+<li>Extracts JSON from Claude&#x27;s response</li>
+<li>Generates interactive HTML topology diagrams</li>
+</ul>
+<h3 id="scanner-architecture">Scanner Architecture</h3>
+<p>The overall system follows a <strong>scan → analyze → report</strong> pattern:</p>
+<p>1. Clone/read repository files</p>
+<p>2. Filter for AI-relevant files using keywords and indicator filenames</p>
+<p>3. Find model references via regex</p>
+<p>4. Send to Claude API for deep analysis</p>
+<p>5. Generate AI-BOM (CycloneDX JSON)</p>
+<p>6. Generate topology diagram (HTML)</p>
+<p>7. Produce Markdown and HTML reports</p>
+<h2 id="security-concerns">8. Security Concerns</h2>
+<h3 id="cve-detection-capability">CVE Detection Capability</h3>
+<p>The scanner includes a <code>CVE_PATTERN</code> regex (<code>CVE-\d{4}-\d{4,7}</code>) to detect CVE references in scanned repositories. It also includes a <strong>CVE context classifier</strong> that distinguishes between:</p>
+<ul>
+<li>CVEs in changelogs/advisories (fix references)</li>
+<li>CVEs in dependency manifests (active vulnerable dependencies)</li>
+</ul>
+<p>No specific CVE IDs are hardcoded or mentioned in the codebase.</p>
+<h3 id="identified-security-concerns">Identified Security Concerns</h3>
+<table class="rt"><thead>
+<tr><th>Concern</th><th>Severity</th><th>Details</th></tr>
+</thead><tbody>
+<tr><td><strong>API Key in CI/CD</strong></td><td>Medium</td><td><code>ANTHROPIC_API_KEY</code> stored as GitHub Actions secret and passed as environment variable. Proper secret management, but key exposure risk in logs if not careful.</td></tr>
+<tr><td><strong>Unbounded file reading</strong></td><td>Low</td><td><code>scan.py</code> reads files up to 100KB (<code>MAX_FILE_SIZE</code>) and total 180KB (<code>MAX_TOTAL_CHARS</code>), but <code>errors=&quot;replace&quot;</code> could mask malicious content.</td></tr>
+<tr><td><strong>Auto-commit to repo</strong></td><td>Medium</td><td>The workflow auto-commits reports back to the repo with <code>[skip ci]</code>, which could be exploited if scan output contains injected content from a malicious repository.</td></tr>
+<tr><td><strong>PR comment injection</strong></td><td>Medium</td><td>Scan results posted as PR comments (up to 65KB) — if a scanned repo contains crafted content, it could inject markdown/links into PR comments.</td></tr>
+<tr><td><strong>No input validation on repo URL</strong></td><td>Medium</td><td>The scanner appears to accept repository URLs without strict validation, potentially enabling SSRF or path traversal if misused.</td></tr>
+<tr><td><strong>Model weight downloads</strong></td><td>High</td><td><code>download_top10.py</code> can download full model weights from Hugging Face Hub (<code>DOWNLOAD_WEIGHTS=1</code>). No integrity verification (hash checking) is performed on downloaded weights, risking supply chain attacks via poisoned models.</td></tr>
+<tr><td><strong>Scanner output self-exclusion</strong></td><td>Low</td><td><code>SKIP_SCANNER_PATTERNS</code> attempts to avoid ingesting stale scan results, but the pattern list may not be comprehensive enough to prevent confusion attacks.</td></tr>
+<tr><td><strong>No Claude response validation</strong></td><td>Medium</td><td>The scanner parses Claude&#x27;s response as structured content but the truncated code doesn&#x27;t show robust validation of Claude&#x27;s output, risking prompt injection from malicious repository content being reflected in reports.</td></tr>
+</tbody></table>
+<h2 id="summary">Summary</h2>
+<p>This repository (<code>rlfagan/llms</code>) is an <strong>AI-powered repository scanning and analysis tool</strong> that uses the Anthropic Claude API to detect and catalog AI/ML components in other codebases. Key findings:</p>
+<table class="rt"><thead>
+<tr><th>Category</th><th>Count</th><th>Key Items</th></tr>
+</thead><tbody>
+<tr><td><strong>AI Frameworks Cataloged</strong></td><td>40+</td><td>PyTorch, TensorFlow, Keras, JAX, scikit-learn, spaCy, NLTK, etc.</td></tr>
+<tr><td><strong>LLM SDKs Cataloged</strong></td><td>11</td><td>OpenAI, Anthropic, Google, Cohere, Mistral, Groq, Together, Replicate, LiteLLM</td></tr>
+<tr><td><strong>Vector DB/Search Cataloged</strong></td><td>7</td><td>Pinecone, Weaviate, Chroma, FAISS, Qdrant, Milvus, Redis</td></tr>
+<tr><td><strong>Orchestration Frameworks</strong></td><td>8</td><td>LangChain, LlamaIndex, Haystack, MCP, A2A-SDK</td></tr>
+<tr><td><strong>HF Models Tracked</strong></td><td>10</td><td>Top-10 most downloaded models with full metadata</td></tr>
+<tr><td><strong>LLM Used (Runtime)</strong></td><td>1</td><td>Anthropic Claude (via <code>anthropic</code> SDK)</td></tr>
+<tr><td><strong>Output Formats</strong></td><td>4</td><td>Markdown, HTML, CycloneDX 1.7 JSON (AI-BOM), Topology HTML</td></tr>
+<tr><td><strong>Security Concerns</strong></td><td>8</td><td>Model supply chain risk, prompt injection risk, auto-commit injection, no weight integrity checks</td></tr>
+</tbody></table>
+<p>The repository serves as both a <strong>reference catalog</strong> of AI/ML ecosystem components (via <code>aibom.py</code>&#x27;s <code>AI_COMPONENT_META</code> dictionary and the <code>models/</code> directory) and an <strong>active scanning tool</strong> that leverages Claude to analyze arbitrary repositories for AI component usage, producing structured reports and CycloneDX-compliant AI Bills of Materials.</p>
+    </div>
+
+    <!-- Models -->
+    <div class="models-section" id="confirmed-models">
+      <h2>🤖 Confirmed Models in Codebase</h2>
+      <p class="muted" style="font-size:.85rem;margin-bottom:16px">
+        Model names detected directly in source files — click any row to jump to the exact location.
+      </p>
+      <div class="model-card">
+          <div class="model-name">🤖 claude-opus-4-6</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>scan.py</code></td>
+              <td>391</td>
+              <td><code>model="claude-opus-4-6",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L391" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>scan.py</code></td>
+              <td>876</td>
+              <td><code>model="claude-opus-4-6",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L876" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 deepseek</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>aibom.py</code></td>
+              <td>108</td>
+              <td><code>"deepseek":  ("DeepSeek",     "deepseek"),</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/aibom.py#L108" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>scan.py</code></td>
+              <td>58</td>
+              <td><code>r'deepseek[\-_]?[\w\.\-]*',</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L58" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 gpt-4</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>scan.py</code></td>
+              <td>51</td>
+              <td><code>r'gpt-4[o\w\-\.]*',</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L51" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 llama</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>aibom.py</code></td>
+              <td>106</td>
+              <td><code>"llama":     ("Meta",         "meta"),</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/aibom.py#L106" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>scan.py</code></td>
+              <td>45</td>
+              <td><code>"cohere", "gemini", "mistral", "ollama", "litellm", "openrouter",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L45" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>scan.py</code></td>
+              <td>56</td>
+              <td><code>r'llama[\-_]?[\w\.\-]*',</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L56" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>scan.py</code></td>
+              <td>586</td>
+              <td><code>"llama":   ["litellm", "llama-index", "llama_index"],</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L586" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 llama-index</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>aibom.py</code></td>
+              <td>35</td>
+              <td><code>"llama-index":       {"license": "MIT",        "supplier": "LlamaIndex",       "type": "library", "purpose": "orchestrat</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/aibom.py#L35" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>scan.py</code></td>
+              <td>586</td>
+              <td><code>"llama":   ["litellm", "llama-index", "llama_index"],</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L586" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 llama_index</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>aibom.py</code></td>
+              <td>36</td>
+              <td><code>"llama_index":       {"license": "MIT",        "supplier": "LlamaIndex",       "type": "library", "purpose": "orchestrat</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/aibom.py#L36" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>scan.py</code></td>
+              <td>41</td>
+              <td><code>"openai", "anthropic", "claude", "langchain", "llamaindex", "llama_index",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L41" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>scan.py</code></td>
+              <td>586</td>
+              <td><code>"llama":   ["litellm", "llama-index", "llama_index"],</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L586" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 llamaindex</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>aibom.py</code></td>
+              <td>35</td>
+              <td><code>"llama-index":       {"license": "MIT",        "supplier": "LlamaIndex",       "type": "library", "purpose": "orchestrat</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/aibom.py#L35" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>aibom.py</code></td>
+              <td>36</td>
+              <td><code>"llama_index":       {"license": "MIT",        "supplier": "LlamaIndex",       "type": "library", "purpose": "orchestrat</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/aibom.py#L36" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>scan.py</code></td>
+              <td>41</td>
+              <td><code>"openai", "anthropic", "claude", "langchain", "llamaindex", "llama_index",</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L41" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 mistral-ai</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>aibom.py</code></td>
+              <td>105</td>
+              <td><code>"mistral":   ("Mistral AI",   "mistral-ai"),</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/aibom.py#L105" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>aibom.py</code></td>
+              <td>107</td>
+              <td><code>"mixtral":   ("Mistral AI",   "mistral-ai"),</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/aibom.py#L107" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 mixtral</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>aibom.py</code></td>
+              <td>107</td>
+              <td><code>"mixtral":   ("Mistral AI",   "mistral-ai"),</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/aibom.py#L107" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>scan.py</code></td>
+              <td>57</td>
+              <td><code>r'mixtral[\-_]?[\w\.\-]*',</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L57" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>scan.py</code></td>
+              <td>587</td>
+              <td><code>"mixtral": ["litellm"],</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L587" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 o1</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>scan.py</code></td>
+              <td>63</td>
+              <td><code>r'o1[\-\w]*',</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L63" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 o3</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>aibom.py</code></td>
+              <td>69</td>
+              <td><code>"boto3":             {"license": "Apache-2.0", "supplier": "Amazon",           "type": "library", "purpose": "cloud-ai"}</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/aibom.py#L69" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>aibom.py</code></td>
+              <td>70</td>
+              <td><code>"aioboto3":          {"license": "Apache-2.0", "supplier": "Amazon",           "type": "library", "purpose": "cloud-ai"}</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/aibom.py#L70" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>scan.py</code></td>
+              <td>64</td>
+              <td><code>r'o3[\-\w]*',</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L64" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>scan.py</code></td>
+              <td>589</td>
+              <td><code>"titan":   ["boto3", "aioboto3"],</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L589" target="_blank">view →</a></td>
+            </tr><tr>
+              <td><code>scan.py</code></td>
+              <td>590</td>
+              <td><code>"nova":    ["boto3", "aioboto3"],</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L590" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+<div class="model-card">
+          <div class="model-name">🤖 sonar</div>
+          <table class="rt"><thead><tr><th>File</th><th>Line</th><th>Snippet</th><th>Link</th></tr></thead>
+          <tbody><tr>
+              <td><code>scan.py</code></td>
+              <td>62</td>
+              <td><code>r'sonar[\-_]?[\w\.\-]*',</code></td>
+              <td><a href="https://github.com/rlfagan/llms/blob/main/scan.py#L62" target="_blank">view →</a></td>
+            </tr></tbody></table>
+        </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>Generated by claudescan &nbsp;·&nbsp; Powered by Claude Opus 4.6</footer>
+</body>
+</html>
