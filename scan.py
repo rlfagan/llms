@@ -826,7 +826,26 @@ def main():
 
     in_ci = bool(os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"))
 
-    repo_dir = str(Path(__file__).parent.resolve())
+    # Resolve the directory to scan:
+    # 1. --dir <path> CLI argument
+    # 2. GITHUB_WORKSPACE env var (set automatically by GitHub Actions)
+    # 3. Directory containing scan.py (default, works when bundled in-repo)
+    cli_dir = None
+    for i, arg in enumerate(sys.argv[1:], 1):
+        if arg == "--dir" and i < len(sys.argv):
+            cli_dir = sys.argv[i + 1]
+            break
+        if arg.startswith("--dir="):
+            cli_dir = arg.split("=", 1)[1]
+            break
+
+    if cli_dir:
+        repo_dir = str(Path(cli_dir).resolve())
+    elif os.environ.get("GITHUB_WORKSPACE"):
+        repo_dir = os.environ["GITHUB_WORKSPACE"]
+    else:
+        repo_dir = str(Path(__file__).parent.resolve())
+
     repo_url = _git_remote_url(repo_dir) or f"file://{repo_dir}"
     repo_name = Path(repo_dir).name
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
